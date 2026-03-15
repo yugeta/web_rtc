@@ -86,10 +86,13 @@
 - **Trickle ICE**: ICE Candidateの段階的送信
 
 #### STUN/TURNサーバー
-- **STUN**: `stun.mynt.work:3478`（NAT越えのためのアドレス解決）
+- **STUN（プライマリ）**: `stun.l.google.com:19302`（Google公開STUNサーバー）
+- **STUN（セカンダリ）**: `stun.mynt.work:3478`（自前STUNサーバー）
 - **TURN**: `stun.mynt.work:3478`（P2P接続不可時のメディアリレー）
 - **TURNS**: `stun.mynt.work:5349`（TLS経由のTURN接続）
 - **シグナリングサーバー**: `sock.mynt.work`（Socket.IOによるWebRTCシグナリング）
+
+> GoogleのSTUNで先にアドレス解決を試み、NAT越えできない場合は自前のTURNにフォールバックする構成。
 
 ### オーディオ処理
 

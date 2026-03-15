@@ -37,6 +37,7 @@ type DataChannelMessage =
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun.mynt.work:3478' },
   { urls: 'turn:stun.mynt.work:3478', username: 'mynt', credential: 'myntpass' },
   { urls: 'turns:stun.mynt.work:5349', username: 'mynt', credential: 'myntpass' },
