@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'simple-peer';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff } from 'lucide-react';
 import AudioVisualizer from './AudioVisualizer';
+import ScreenShareView from './ScreenShareView';
 
 interface RoomProps {
   roomId: string;
@@ -22,11 +23,16 @@ interface PeerData {
   peerId: string;
   peer: Peer.Instance;
   stream?: MediaStream;
+  screenStream?: MediaStream;
   isAudioEnabled?: boolean;
   isVideoEnabled?: boolean;
   userName?: string;
   dataChannel?: RTCDataChannel;
 }
+
+type DataChannelMessage =
+  | { type: 'status'; audio: boolean; video: boolean }
+  | { type: 'screen-share'; sharing: boolean; userName?: string };
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
@@ -127,9 +133,17 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>(initialSettings?.outputDeviceId || '');
   const [showOutputMenu, setShowOutputMenu] = useState(false);
 
+  // 画面共有関連のState
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenSharingUserId, setScreenSharingUserId] = useState<string | null>(null);
+  const [screenSharingUserName, setScreenSharingUserName] = useState<string | null>(null);
+  const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
+
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<{ [socketId: string]: Peer.Instance }>({});
   const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -338,6 +352,15 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
 
         // 9. 退出
         socketRef.current.on('user-disconnected', (userId: string) => {
+          // 画面共有中のユーザーが退出した場合のクリーンアップ
+          setScreenSharingUserId(prev => {
+            if (prev === userId) {
+              setScreenSharingUserName(null);
+              return null;
+            }
+            return prev;
+          });
+
           if (peersRef.current[userId]) {
             peersRef.current[userId].destroy();
             delete peersRef.current[userId];
@@ -363,6 +386,11 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       }
       if (localStreamRef.current && localStreamRef.current !== currentStream) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      // 画面共有ストリームのクリーンアップ
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
       }
       Object.keys(peersRef.current).forEach(key => {
         if (peersRef.current[key]) {
@@ -405,18 +433,36 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         audioTracks: userStream.getAudioTracks().length,
         videoTracks: userStream.getVideoTracks().length
       });
-      updatePeerStream(targetUserId, userStream);
+      // 画面共有ストリームの判定: 音声トラックがなく映像トラックのみ
+      if (userStream.getAudioTracks().length === 0 && userStream.getVideoTracks().length > 0) {
+        setPeers(prev => prev.map(p =>
+          p.peerId === targetUserId ? { ...p, screenStream: userStream } : p
+        ));
+      } else {
+        updatePeerStream(targetUserId, userStream);
+      }
     });
 
     // DataChannelでメッセージを受信
     peer.on('data', data => {
       try {
-        const message = JSON.parse(data.toString());
+        const message = JSON.parse(data.toString()) as DataChannelMessage;
         console.log('[DataChannel] Received from:', targetUserId, message);
         
         if (message.type === 'status') {
           updatePeerTrackState(targetUserId, 'audio', message.audio);
           updatePeerTrackState(targetUserId, 'video', message.video);
+        } else if (message.type === 'screen-share') {
+          if (message.sharing) {
+            setScreenSharingUserId(targetUserId);
+            setScreenSharingUserName(message.userName || null);
+          } else {
+            setScreenSharingUserId(null);
+            setScreenSharingUserName(null);
+            setPeers(prev => prev.map(p =>
+              p.peerId === targetUserId ? { ...p, screenStream: undefined } : p
+            ));
+          }
         }
       } catch (err) {
         console.warn('[DataChannel] Parse error:', err);
@@ -431,6 +477,22 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       const audioEnabled = currentStream?.getAudioTracks()[0]?.enabled ?? true;
       const videoEnabled = currentStream?.getVideoTracks()[0]?.enabled ?? true;
       sendStatusToPeer(peer, audioEnabled, videoEnabled);
+      // 自分が画面共有中なら新しいPeerにも通知
+      if (screenStreamRef.current) {
+        const screenTrack = screenStreamRef.current.getVideoTracks()[0];
+        if (screenTrack) {
+          try {
+            peer.addTrack(screenTrack, screenStreamRef.current);
+          } catch (err) {
+            console.warn('[ScreenShare] Failed to add screen track to new peer:', err);
+          }
+        }
+        try {
+          peer.send(JSON.stringify({ type: 'screen-share', sharing: true, userName } satisfies DataChannelMessage));
+        } catch (err) {
+          console.warn('[DataChannel] Failed to send screen share status to new peer:', err);
+        }
+      }
     });
 
     return peer;
@@ -464,18 +526,36 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         audioTracks: userStream.getAudioTracks().length,
         videoTracks: userStream.getVideoTracks().length
       });
-      updatePeerStream(callerId, userStream);
+      // 画面共有ストリームの判定: 音声トラックがなく映像トラックのみ
+      if (userStream.getAudioTracks().length === 0 && userStream.getVideoTracks().length > 0) {
+        setPeers(prev => prev.map(p =>
+          p.peerId === callerId ? { ...p, screenStream: userStream } : p
+        ));
+      } else {
+        updatePeerStream(callerId, userStream);
+      }
     });
 
     // DataChannelでメッセージを受信
     peer.on('data', data => {
       try {
-        const message = JSON.parse(data.toString());
+        const message = JSON.parse(data.toString()) as DataChannelMessage;
         console.log('[DataChannel] Received from:', callerId, message);
         
         if (message.type === 'status') {
           updatePeerTrackState(callerId, 'audio', message.audio);
           updatePeerTrackState(callerId, 'video', message.video);
+        } else if (message.type === 'screen-share') {
+          if (message.sharing) {
+            setScreenSharingUserId(callerId);
+            setScreenSharingUserName(message.userName || null);
+          } else {
+            setScreenSharingUserId(null);
+            setScreenSharingUserName(null);
+            setPeers(prev => prev.map(p =>
+              p.peerId === callerId ? { ...p, screenStream: undefined } : p
+            ));
+          }
         }
       } catch (err) {
         console.warn('[DataChannel] Parse error:', err);
@@ -490,6 +570,22 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       const audioEnabled = currentStream?.getAudioTracks()[0]?.enabled ?? true;
       const videoEnabled = currentStream?.getVideoTracks()[0]?.enabled ?? true;
       sendStatusToPeer(peer, audioEnabled, videoEnabled);
+      // 自分が画面共有中なら新しいPeerにも通知
+      if (screenStreamRef.current) {
+        const screenTrack = screenStreamRef.current.getVideoTracks()[0];
+        if (screenTrack) {
+          try {
+            peer.addTrack(screenTrack, screenStreamRef.current);
+          } catch (err) {
+            console.warn('[ScreenShare] Failed to add screen track to new peer:', err);
+          }
+        }
+        try {
+          peer.send(JSON.stringify({ type: 'screen-share', sharing: true, userName } satisfies DataChannelMessage));
+        } catch (err) {
+          console.warn('[DataChannel] Failed to send screen share status to new peer:', err);
+        }
+      }
     });
 
     return peer;
@@ -570,6 +666,100 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
     Object.values(peersRef.current).forEach(peer => {
       sendStatusToPeer(peer, audio, video);
     });
+  };
+
+  // 全てのPeerに画面共有状態を送信
+  const broadcastScreenShareStatus = (sharing: boolean, sharingUserName?: string) => {
+    const message = JSON.stringify({
+      type: 'screen-share',
+      sharing,
+      userName: sharingUserName
+    } satisfies DataChannelMessage);
+
+    Object.values(peersRef.current).forEach(peer => {
+      if (peer && !peer.destroyed) {
+        try {
+          peer.send(message);
+        } catch (err) {
+          console.warn('[DataChannel] Screen share status send error:', err);
+        }
+      }
+    });
+  };
+
+  // 画面共有の開始
+  const startScreenShare = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always' } as any,
+        audio: false
+      });
+
+      const screenTrack = stream.getVideoTracks()[0];
+
+      // ブラウザの「共有を停止」ボタン対応
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+
+      // 全Peerに画面共有トラックを追加
+      Object.values(peersRef.current).forEach(peer => {
+        if (!peer.destroyed) {
+          try {
+            peer.addTrack(screenTrack, stream);
+          } catch (err) {
+            console.warn('[ScreenShare] Failed to add track to peer:', err);
+          }
+        }
+      });
+
+      // DataChannelで画面共有開始を通知
+      broadcastScreenShareStatus(true, userName);
+
+      setScreenStream(stream);
+      screenStreamRef.current = stream;
+      setIsScreenSharing(true);
+      setScreenSharingUserId(socketRef.current?.id || null);
+      setScreenSharingUserName(userName);
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to start screen sharing:', err);
+      alert('画面共有の開始に失敗しました');
+    }
+  };
+
+  // 画面共有の停止
+  const stopScreenShare = () => {
+    if (screenStreamRef.current) {
+      const screenTrack = screenStreamRef.current.getVideoTracks()[0];
+
+      // 全トラックを停止
+      screenStreamRef.current.getTracks().forEach(track => track.stop());
+
+      // 全Peerから画面共有トラックを削除
+      if (screenTrack) {
+        Object.values(peersRef.current).forEach(peer => {
+          if (!peer.destroyed) {
+            try {
+              peer.removeTrack(screenTrack, screenStreamRef.current!);
+            } catch (err) {
+              console.warn('[ScreenShare] Failed to remove track from peer:', err);
+            }
+          }
+        });
+      }
+
+      // DataChannelで画面共有停止を通知
+      broadcastScreenShareStatus(false);
+
+      setScreenStream(null);
+      screenStreamRef.current = null;
+      setIsScreenSharing(false);
+      setScreenSharingUserId(null);
+      setScreenSharingUserName(null);
+    }
   };
 
   // マイクデバイスの切り替え
@@ -701,7 +891,23 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         </div>
       </div>
 
-      <div className="video-grid">
+      <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`}>
+        {/* 画面共有表示 */}
+        {screenSharingUserId && (() => {
+          // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
+          const isLocalSharing = screenSharingUserId === socketRef.current?.id;
+          const shareStream = isLocalSharing
+            ? screenStream
+            : peers.find(p => p.peerId === screenSharingUserId)?.screenStream || null;
+          
+          return shareStream ? (
+            <ScreenShareView
+              stream={shareStream}
+              userName={screenSharingUserName || ''}
+            />
+          ) : null;
+        })()}
+
         {/* 自分 */}
         {localStream && (
           <VideoPlayer 
@@ -792,6 +998,28 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         >
           {isVideoEnabled ? <Video /> : <VideoOff />}
         </button>
+
+        {/* 画面共有ボタン */}
+        {isScreenShareSupported && (
+          <button
+            className={`icon ${isScreenSharing ? 'active' : ''}`}
+            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+            disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
+            title={
+              screenSharingUserId && screenSharingUserId !== socketRef.current?.id
+                ? '他の参加者が画面共有中です'
+                : isScreenSharing
+                  ? '共有を停止'
+                  : '画面を共有'
+            }
+            style={{
+              opacity: screenSharingUserId && screenSharingUserId !== socketRef.current?.id ? 0.5 : 1,
+              cursor: screenSharingUserId && screenSharingUserId !== socketRef.current?.id ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isScreenSharing ? <MonitorOff /> : <Monitor />}
+          </button>
+        )}
 
         {/* スピーカー選択 */}
         <div className="control-group">

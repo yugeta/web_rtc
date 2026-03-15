@@ -347,3 +347,90 @@ input:focus {
   color: var(--accent);
   background: rgba(59, 130, 246, 0.1);
 }
+
+/* 画面共有レイアウト */
+.video-grid.with-screen-share {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  align-content: stretch;
+}
+
+.video-grid.with-screen-share .screen-share-wrapper {
+  grid-column: 1 / -1;
+}
+
+.video-grid.with-screen-share .screen-share-wrapper ~ .video-wrapper {
+  max-width: 240px;
+  aspect-ratio: 16/9;
+}
+
+.video-grid.with-screen-share .screen-share-wrapper ~ .video-wrapper:first-of-type {
+  /* カメラ映像を横並びにする */
+}
+
+.screen-share-wrapper {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--accent);
+  width: 100%;
+  max-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen-share-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.screen-share-label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(59, 130, 246, 0.8);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+/* 画面共有中のカメラ映像を下部に小さく並べる */
+.video-grid.with-screen-share {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.video-grid.with-screen-share .screen-share-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+.video-grid.with-screen-share .screen-share-wrapper ~ .video-wrapper {
+  flex: 0 0 auto;
+}
+
+/* 画面共有中のカメラ映像コンテナ */
+.video-grid.with-screen-share {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+}
+
+.video-grid.with-screen-share > .screen-share-wrapper {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.video-grid.with-screen-share > .video-wrapper {
+  max-width: 200px;
+  min-width: 160px;
+}
