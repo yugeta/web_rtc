@@ -138,6 +138,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharingUserId, setScreenSharingUserId] = useState<string | null>(null);
   const [screenSharingUserName, setScreenSharingUserName] = useState<string | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   const socketRef = useRef<Socket | null>(null);
@@ -1067,7 +1068,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
 
         <button 
           className="icon active" 
-          onClick={onLeave}
+          onClick={() => setShowLeaveConfirm(true)}
           style={{ width: 'auto', padding: '0 24px', borderRadius: '24px' }}
           title="Leave Room"
         >
@@ -1075,6 +1076,31 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
           <span style={{ fontSize: '14px', fontWeight: 600 }}>退出する</span>
         </button>
       </div>
+
+      {/* 退出確認モーダル */}
+      {showLeaveConfirm && (
+        <div className="leave-modal-overlay" onClick={() => setShowLeaveConfirm(false)}>
+          <div className="leave-modal" onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>ルームを退出しますか？</p>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>通話から切断されます。</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                style={{ background: 'rgba(255,255,255,0.1)', color: 'white', padding: '10px 24px', borderRadius: '8px' }}
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="danger"
+                style={{ padding: '10px 24px', borderRadius: '8px' }}
+                onClick={onLeave}
+              >
+                退出する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
