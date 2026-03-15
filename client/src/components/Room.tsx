@@ -36,6 +36,12 @@ type DataChannelMessage =
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.mynt.work:3478' },
+  { urls: 'turn:stun.mynt.work:3478', username: 'mynt', credential: 'myntpass' },
+  { urls: 'turns:stun.mynt.work:5349', username: 'mynt', credential: 'myntpass' },
+];
+
 // 個別のビデオ表示用コンポーネント
 const VideoPlayer = ({ 
   stream, 
@@ -418,6 +424,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       trickle: true,
       stream,
       channelName: 'status', // DataChannelを作成
+      config: { iceServers: ICE_SERVERS },
     });
 
     peer.on('error', err => {
@@ -511,6 +518,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       initiator: false,
       trickle: true,
       stream,
+      config: { iceServers: ICE_SERVERS },
     });
 
     peer.on('error', err => {

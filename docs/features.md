@@ -85,6 +85,12 @@
 - **統一シグナルパス**: Offer/Answer/ICE Candidateを単一のイベントで処理
 - **Trickle ICE**: ICE Candidateの段階的送信
 
+#### STUN/TURNサーバー
+- **STUN**: `stun.mynt.work:3478`（NAT越えのためのアドレス解決）
+- **TURN**: `stun.mynt.work:3478`（P2P接続不可時のメディアリレー）
+- **TURNS**: `stun.mynt.work:5349`（TLS経由のTURN接続）
+- **シグナリングサーバー**: `sock.mynt.work`（Socket.IOによるWebRTCシグナリング）
+
 ### オーディオ処理
 
 #### AudioContext
