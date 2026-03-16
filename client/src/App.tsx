@@ -23,6 +23,19 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
+/**
+ * URLクエリ文字列から `room` パラメータを解析し、バリデーション済みのルーム名を返す。
+ * 無効な場合は null を返す。
+ */
+export function parseRoomQueryParam(search: string): string | null {
+  const params = new URLSearchParams(search);
+  const room = params.get('room');
+  if (room && /^[a-zA-Z0-9_-]+$/.test(room)) {
+    return room;
+  }
+  return null;
+}
+
 const setCookie = (name: string, value: string, days: number = 365) => {
   const date = new Date();
   date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -37,11 +50,16 @@ function App() {
   const [showPreJoin, setShowPreJoin] = useState(false);
   const [mediaSettings, setMediaSettings] = useState<MediaSettings | null>(null);
 
-  // 初回レンダリング時にCookieから名前を読み込む
+  // 初回レンダリング時にCookieから名前を読み込み、クエリパラメータからルームIDを設定する
   useEffect(() => {
     const savedName = getCookie('userName');
     if (savedName) {
       setUserName(decodeURIComponent(savedName));
+    }
+
+    const roomFromUrl = parseRoomQueryParam(window.location.search);
+    if (roomFromUrl) {
+      setRoomId(roomFromUrl);
     }
   }, []);
 
