@@ -87,7 +87,14 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
     videoEnabled: boolean
   ) => {
     try {
-      // デバイスリストを取得
+      // まず権限を取得するために一旦getUserMediaを呼ぶ
+      // これによりenumerateDevicesでラベル付きのデバイスリストが取得できる
+      const tempStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true
+      });
+
+      // デバイスリストを取得（権限取得後なのでラベルが取れる）
       const devices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = devices.filter(d => d.kind === 'audioinput');
       const videoInputs = devices.filter(d => d.kind === 'videoinput');
@@ -140,7 +147,10 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
       setSelectedVideoDeviceId(videoDeviceId);
       setSelectedOutputDeviceId(outputDeviceId);
       
-      // メディアストリームを取得
+      // 一時ストリームを停止
+      tempStream.getTracks().forEach(track => track.stop());
+
+      // 選択したデバイスでメディアストリームを再取得
       const audioConstraints = audioDeviceId && audioDeviceId !== 'default' && audioDeviceId !== 'communications'
         ? { deviceId: { ideal: audioDeviceId } }
         : true;
