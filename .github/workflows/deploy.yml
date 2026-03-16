@@ -28,7 +28,7 @@ jobs:
       - run: npx vite build
         working-directory: client
         env:
-          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
+          VITE_SERVER_URL: https://sock.mynt.work
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist
