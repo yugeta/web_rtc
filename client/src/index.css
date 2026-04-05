@@ -669,10 +669,31 @@ button.icon[data-disabled="true"] {
   position: relative;
 }
 
+/* デスクトップ: モバイル用画面共有ボタンを非表示 */
+.mobile-share-btn {
+  display: none;
+  position: relative;
+}
+
 .desktop-controls {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.controls-group-devices {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controls-group-share {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 8px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* モバイルメニュー */
@@ -827,6 +848,10 @@ button.icon[data-disabled="true"] {
   }
 
   .mobile-chat-btn {
+    display: flex;
+  }
+
+  .mobile-share-btn {
     display: flex;
   }
 
