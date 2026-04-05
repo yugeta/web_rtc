@@ -4,7 +4,15 @@ import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
+// OPTIONSプリフライトに明示的に応答
+app.options('*', cors());
 
 const server = createServer(app);
 const io = new Server(server, {
@@ -14,7 +22,8 @@ const io = new Server(server, {
   },
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 // エラーハンドリング
