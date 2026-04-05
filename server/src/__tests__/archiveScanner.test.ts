@@ -44,8 +44,8 @@ describe('scanAndCleanup', () => {
   });
 
   it('should return silently when archive directory does not exist', () => {
-    // Remove the archive dir
-    fs.rmdirSync(ARCHIVE_DIR);
+    // Remove the archive dir (may contain files from other tests)
+    fs.rmSync(ARCHIVE_DIR, { recursive: true, force: true });
     expect(() => scanAndCleanup()).not.toThrow();
   });
 

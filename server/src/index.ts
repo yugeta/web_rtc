@@ -2,8 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { ensureDirectories, appendMessage, getHistory, archiveLog } from './chatLogManager';
 import { startScheduler } from './archiveScanner';
+import authRouter from './routes/auth';
+import roomsRouter from './routes/rooms';
+import type { JwtUserPayload } from './middleware/auth';
+
+// 必須環境変数のバリデーション
+const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'JWT_SECRET'] as const;
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Error: ${envVar} environment variable is not set`);
+    process.exit(1);
+  }
+}
 
 const app = express();
 app.use(cors({
@@ -16,6 +29,12 @@ app.use(cors({
 // OPTIONSプリフライトに明示的に応答
 app.options('{*path}', cors());
 
+app.use(express.json());
+
+// 認証ルートと Room ルートをマウント
+app.use('/api/auth', authRouter);
+app.use('/api/rooms', roomsRouter);
+
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -26,6 +45,20 @@ const io = new Server(server, {
   pingInterval: 25000,
   transports: ['websocket', 'polling'],
   allowEIO3: true
+});
+
+// Socket.IO JWT 認証ミドルウェア
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env['JWT_SECRET']!) as JwtUserPayload;
+      socket.data.user = decoded;
+    } catch {
+      // 無効な JWT でも接続を拒否しない（未認証ユーザーとして扱う）
+    }
+  }
+  next();
 });
 
 // エラーハンドリング
