@@ -155,6 +155,8 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState('00:00');
+  const roomStartedAtRef = useRef<string | null>(null);
   const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   const socketRef = useRef<Socket | null>(null);
@@ -335,6 +337,11 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
         // 3. ルーム参加（ユーザー名も送信）
         socketRef.current.emit('join-room', { roomId, userName });
 
+        // Room 開始時刻を受信
+        socketRef.current.on('room-started-at', (startedAt: string) => {
+          roomStartedAtRef.current = startedAt;
+        });
+
         // 4. すでに居るユーザー全員に対してPeerを作成 (発信側)
         socketRef.current.on('all-users', (usersInRoom: Array<{ userId: string, userName: string }>) => {
           console.log('[all-users] Received users:', usersInRoom);
@@ -437,6 +444,22 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
       localStreamRef.current = null;
     };
   }, [roomId]);
+
+  // 経過時間カウントアップ
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const startedAt = roomStartedAtRef.current;
+      if (!startedAt) return;
+      const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      if (diff < 0) return;
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setElapsedTime(h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Peer作成（自分が発信する場合）
   const createPeer = (targetUserId: string, callerId: string, stream: MediaStream) => {
@@ -970,7 +993,8 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
       <div className="room-header">
         <h2>Room: {roomName || roomId}</h2>
         <div className="room-user-count">
-          👤 {peers.length + 1}
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>⏱ {elapsedTime}</span>
+          <span style={{ marginLeft: '12px' }}>👤 {peers.length + 1}</span>
         </div>
       </div>
 
