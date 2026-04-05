@@ -11,6 +11,9 @@ Ubuntu 24.04 LTS インストール直後の状態から、シグナリングサ
 | メモリ | 1GB（最小構成を想定） |
 | SSD | 20GB以上 |
 | IP | グローバルIPv4 |
+| シグナリングサーバー | `sock.mynt.work` |
+| クライアント配信 | GitHub Pages (`yugeta.github.io/web_rtc/`) |
+| STUN/TURNサーバー | `stun.mynt.work` |
 
 > **メモリ1GBの制約**: クライアントのビルド（`npm run build`）はメモリ不足になる可能性が高いため、ローカルPCでビルドしてサーバーに転送します。
 
@@ -32,10 +35,7 @@ uname -r
 ### 1.2 事前インストール済みパッケージの確認
 
 ```bash
-# 主要コマンドの有無を確認
 which git curl wget nginx node npm pm2 certbot
-
-# インストール済みパッケージ一覧（必要に応じて）
 dpkg -l | wc -l
 ```
 
@@ -72,24 +72,25 @@ sudo fallocate -l 1G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
+```
 
-- エラー（すでにswapが使われている）の場合（メモリを再構築する手順）
-> fallocate: fallocate failed: Text file busy
+エラー（すでにswapが使われている）の場合:
+
+```bash
 sudo swapoff /swapfile
 sudo rm /swapfile
 sudo fallocate -l 1G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
+```
 
-# 永続化
+永続化:
+
+```bash
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
-# swappiness調整
 echo 'vm.swappiness=60' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
-
-# 確認
 free -h
 ```
 
@@ -105,31 +106,36 @@ sudo apt install -y git curl nginx certbot python3-certbot-nginx
 
 ## 3. Node.jsのインストール
 
-```bash
-- Node公式リポジトリを使う方法。
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+Node公式リポジトリを使う方法:
 
-- またはnpmを使う方法。
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+またはnvmを使う方法:
+
+```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
 nvm install 20
+```
 
-sudo apt install -y nodejs
+確認:
 
-# 確認
+```bash
 node --version   # v20.x.x
 npm --version    # 10.x.x
+```
 
-- 既存のバージョンが古い場合は、上記コマンドでバージョンが上書きされる。
+### Ubuntu 18でのインストール手順
 
-## Ubuntu18でのインストール手順
-- Node20互換ビルドを取得
+```bash
 wget https://unofficial-builds.nodejs.org/download/release/v20.11.1/node-v20.11.1-linux-x64-glibc-217.tar.xz
 tar xf node-v20.11.1-linux-x64-glibc-217.tar.xz
 mv node-v20.11.1-linux-x64-glibc-217 /usr/local/node20
 echo 'export PATH=/usr/local/node20/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
-
 ```
 
 ---
@@ -151,14 +157,14 @@ pm2 startup
 ### 5.1 ディレクトリ作成
 
 ```bash
-sudo mkdir -p /var/www/webrtc-app
-sudo chown -R $USER:$USER /var/www/webrtc-app
+sudo mkdir -p /var/www/web_rtc
+sudo chown -R $USER:$USER /var/www/web_rtc
 ```
 
 ### 5.2 サーバーのデプロイ
 
 ```bash
-cd /var/www/webrtc-app
+cd /var/www/web_rtc
 git clone <リポジトリURL> .
 
 cd server
@@ -169,8 +175,8 @@ npm install ts-node typescript
 ### 5.3 サーバー環境変数の設定
 
 ```bash
-# cat > /var/www/webrtc-app/server/.env << 'EOF'
-cat > ./.env << 'EOF'
+cd /var/www/web_rtc/server
+cat > .env << 'EOF'
 PORT=3001
 NODE_ENV=production
 EOF
@@ -178,35 +184,37 @@ EOF
 
 ### 5.4 クライアントのビルドと転送（ローカルPCで実行）
 
+本プロジェクトではクライアントは GitHub Pages で配信しているため、GitHub Actions（`.github/workflows/deploy.yml`）が `main` ブランチへの push 時に自動ビルド・デプロイします。
+
+手動でVPSに配置する場合:
+
 ```bash
 # --- ローカルPCで実行 ---
 cd client
-
-# 本番用の環境変数を設定
-echo 'VITE_SERVER_URL=https://your-domain.com' > .env.production
-
+echo 'VITE_SERVER_URL=https://sock.mynt.work' > .env.production
 npm install
 npm run build
 
 # ビルド成果物をサーバーに転送
-scp -r dist/ ubuntu@<VPSのIPアドレス>:/var/www/webrtc-app/client/dist/
+scp -r dist/ ubuntu@<VPSのIPアドレス>:/var/www/web_rtc/client/dist/
 ```
 
 > メモリ2GB以上の環境であればサーバー上で直接 `npm run build` も可能。
 
 ---
 
-## 6. PM2でサーバーを起動
+## 6. サーバーの起動と自動起動
+
+### 6.1 PM2で起動する場合
 
 ```bash
-cd /var/www/webrtc-app/server
+cd /var/www/web_rtc/server
 
 pm2 start src/index.ts \
   --name webrtc-server \
   --interpreter ./node_modules/.bin/ts-node \
   --max-memory-restart 400M
 
-# 確認
 pm2 status
 pm2 logs webrtc-server --lines 20
 
@@ -214,63 +222,129 @@ pm2 logs webrtc-server --lines 20
 pm2 save
 ```
 
+### 6.2 systemdで起動する場合（PM2の代替）
+
+```bash
+sudo tee /etc/systemd/system/web-rtc-signaling.service << 'EOF'
+[Unit]
+Description=WebRTC Signaling Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/web_rtc/server
+ExecStart=/usr/bin/npx ts-node src/index.ts
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3001
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+> `ExecStart` のパスは `which npx` の結果に合わせてください。nvm 使用時はフルパスが必要です（例: `/home/username/.nvm/versions/node/v20.x.x/bin/npx`）。
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable web-rtc-signaling
+sudo systemctl start web-rtc-signaling
+sudo systemctl status web-rtc-signaling
+
+# ログ確認
+sudo journalctl -u web-rtc-signaling -f
+```
+
 ---
 
 ## 7. Nginxの設定
 
-### 7.1 SSL取得用の一時設定
+### 7.1 シグナリングサーバー用（sock.mynt.work）
 
-SSL証明書取得前に、まずHTTPのみで起動します。
+`sock.mynt.work` は Socket.IO サーバーへのリバースプロキシとして設定します。
 
 ```bash
-sudo tee /etc/nginx/sites-available/webrtc-app << 'NGINX'
+sudo tee /etc/nginx/sites-available/sock.mynt.work << 'NGINX'
+server {
+    server_name sock.mynt.work;
+
+    # dot files を拒否
+    location ~ /\.git { deny all; return 404; }
+    location ~ /\..*$ { deny all; return 404; }
+
+    # Socket.IO + HTTPリクエストをNode.jsにプロキシ
+    location / {
+        # CORS preflight (OPTIONS) 対応
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+
+        # WebSocket対応
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Socket.IOのlong-polling対応
+        proxy_read_timeout 86400;
+
+        # プロキシ先のCORSヘッダーをそのまま通す
+        proxy_pass_header Access-Control-Allow-Origin;
+        proxy_pass_header Access-Control-Allow-Methods;
+        proxy_pass_header Access-Control-Allow-Headers;
+        proxy_pass_header Access-Control-Allow-Credentials;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/sock.mynt.work/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sock.mynt.work/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
 server {
     listen 80;
-    listen [::]:80;
-    server_name your-domain.com;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        root /var/www/webrtc-app/client/dist;
-        try_files $uri $uri/ /index.html;
-    }
+    server_name sock.mynt.work;
+    return 301 https://$host$request_uri;
 }
 NGINX
 
-sudo ln -sf /etc/nginx/sites-available/webrtc-app /etc/nginx/sites-enabled/webrtc-app
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/sock.mynt.work /etc/nginx/sites-enabled/sock.mynt.work
 sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-### 7.2 SSL証明書の取得
+### 7.2 SSL証明書の取得（新規の場合）
 
 ```bash
-sudo certbot --nginx -d your-domain.com
-
-# 自動更新テスト
+sudo certbot --nginx -d sock.mynt.work
 sudo certbot renew --dry-run
 ```
 
-### 7.3 本番用Nginx設定に切り替え
+### 7.3 クライアントをVPSで配信する場合（GitHub Pages不使用時）
 
 ```bash
-sudo tee /etc/nginx/sites-available/webrtc-app << 'NGINX'
+sudo tee /etc/nginx/sites-available/webrtc-client << 'NGINX'
 server {
     listen 80;
     listen [::]:80;
     server_name your-domain.com;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://$server_name$request_uri;
-    }
+    return 301 https://$server_name$request_uri;
 }
 
 server {
@@ -288,15 +362,13 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     server_tokens off;
 
-    # Gzip
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/javascript application/javascript application/json;
 
-    # クライアント（静的ファイル）
     location / {
-        root /var/www/webrtc-app/client/dist;
+        root /var/www/web_rtc/client/dist;
         try_files $uri $uri/ /index.html;
 
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
@@ -304,26 +376,8 @@ server {
             add_header Cache-Control "public, immutable";
         }
     }
-
-    # Socket.IO（WebSocket対応）
-    location /socket.io/ {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 7d;
-        proxy_send_timeout 7d;
-        proxy_read_timeout 7d;
-    }
 }
 NGINX
-
-sudo nginx -t
-sudo systemctl restart nginx
 ```
 
 ---
@@ -345,8 +399,11 @@ sudo ufw status
 ## 9. 動作確認
 
 ```bash
-# PM2ステータス
+# PM2使用時
 pm2 status
+
+# systemd使用時
+sudo systemctl status web-rtc-signaling
 
 # ヘルスチェック
 curl -s http://localhost:3001/
@@ -354,13 +411,12 @@ curl -s http://localhost:3001/
 
 # メモリ使用量
 free -h
-pm2 monit
 
 # Nginxエラーログ
 sudo tail -f /var/log/nginx/error.log
 ```
 
-ブラウザで `https://your-domain.com` にアクセスして動作確認。
+ブラウザで `https://yugeta.github.io/web_rtc/` にアクセスして動作確認。
 
 ---
 
@@ -369,19 +425,29 @@ sudo tail -f /var/log/nginx/error.log
 ### サーバー側
 
 ```bash
-cd /var/www/webrtc-app
+cd /var/www/web_rtc
 git pull origin main
 cd server
 npm install --production
+
+# PM2使用時
 pm2 restart webrtc-server
+
+# systemd使用時
+sudo systemctl restart web-rtc-signaling
 ```
 
-### クライアント側（ローカルPCで実行）
+### クライアント側
+
+GitHub Pages 使用時は `main` ブランチに push すれば GitHub Actions が自動デプロイします。
+
+VPSに手動配置する場合:
 
 ```bash
+# ローカルPCで実行
 cd client
 npm run build
-scp -r dist/ ubuntu@<VPSのIPアドレス>:/var/www/webrtc-app/client/dist/
+scp -r dist/ ubuntu@<VPSのIPアドレス>:/var/www/web_rtc/client/dist/
 ```
 
 ---
