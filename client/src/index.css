@@ -663,6 +663,12 @@ button.icon[data-disabled="true"] {
   display: none;
 }
 
+/* デスクトップ: モバイル用チャットボタンを非表示 */
+.mobile-chat-btn {
+  display: none;
+  position: relative;
+}
+
 .desktop-controls {
   display: flex;
   align-items: center;
@@ -820,6 +826,10 @@ button.icon[data-disabled="true"] {
     display: flex;
   }
 
+  .mobile-chat-btn {
+    display: flex;
+  }
+
   .controls-bar {
     padding: 12px 16px;
     gap: 12px;
@@ -910,6 +920,31 @@ button.icon[data-disabled="true"] {
   padding: 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-panel-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 0;
+}
+
+.chat-panel-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 480px) {
+  .chat-panel-close {
+    display: block;
+  }
 }
 
 .chat-panel-title {
