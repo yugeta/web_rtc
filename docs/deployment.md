@@ -168,8 +168,8 @@ cd /var/www/web_rtc
 git clone <リポジトリURL> .
 
 cd server
-npm install --production
-npm install ts-node typescript
+npm install        # devDependencies含む（TypeScriptビルドに必要）
+npm run build      # TypeScript → dist/ にコンパイル
 ```
 
 ### 5.3 サーバー環境変数の設定
@@ -210,9 +210,8 @@ scp -r dist/ ubuntu@<VPSのIPアドレス>:/var/www/web_rtc/client/dist/
 ```bash
 cd /var/www/web_rtc/server
 
-pm2 start src/index.ts \
+pm2 start dist/index.js \
   --name webrtc-server \
-  --interpreter ./node_modules/.bin/ts-node \
   --max-memory-restart 400M
 
 pm2 status
@@ -234,7 +233,7 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/web_rtc/server
-ExecStart=/usr/bin/npx ts-node src/index.ts
+ExecStart=/usr/bin/node /var/www/web_rtc/server/dist/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
@@ -428,7 +427,8 @@ sudo tail -f /var/log/nginx/error.log
 cd /var/www/web_rtc
 git pull origin main
 cd server
-npm install --production
+npm install        # devDependencies含む（TypeScriptビルドに必要）
+npm run build      # TypeScript → dist/ にコンパイル
 
 # PM2使用時
 pm2 restart webrtc-server
