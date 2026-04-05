@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { Video } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import AppHeader from '../components/AppHeader';
 
 export default function LandingPage() {
   const auth = useAuth();
@@ -36,6 +37,7 @@ export default function LandingPage() {
 
   return (
     <div className="home-container">
+      <AppHeader />
       <div className="glass-panel">
         <div className="home-icon-wrapper">
           <div className="home-icon-bg">

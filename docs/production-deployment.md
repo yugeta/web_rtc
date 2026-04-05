@@ -77,3 +77,24 @@ GitHub Actions 自動デプロイの場合:
 手動ビルドの場合:
 - `client/.env.production` に `VITE_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com` を設定
 - `npm run build` → VPS に転送
+
+### 2026-04-06: UI 改善・経過時間タイマー・グリッドレイアウト
+
+Dashboard レスポンシブ対応、コントロールバーの Mic/Speaker 統合メニュー化、Room 経過時間カウントアップ表示、人数に応じたビデオグリッドレイアウトを追加。
+
+#### サーバー側の作業
+
+```bash
+ssh ubuntu@<VPSのIPアドレス>
+cd /var/www/web_rtc
+git pull origin main
+cd server
+npm run build
+pm2 restart webrtc-server
+```
+
+※ 今回は新規パッケージの追加なし。`npm install` は不要。
+
+#### クライアント側の作業
+
+GitHub Pages 自動デプロイ（`main` に push 済みなら自動反映）。追加の設定変更なし。

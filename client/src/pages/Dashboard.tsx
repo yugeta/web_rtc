@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Copy, LogOut, Video, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import AppHeader from '../components/AppHeader';
 import './Dashboard.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -16,7 +17,7 @@ interface Room {
 }
 
 export default function Dashboard() {
-  const { token, user, logout } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoomName, setNewRoomName] = useState('');
@@ -81,8 +82,6 @@ export default function Dashboard() {
     } catch { setError('URL のコピーに失敗しました'); }
   };
 
-  const handleLogout = () => { logout(); navigate('/'); };
-
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -90,24 +89,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100vh' }}>
-      <header className="dashboard-header">
-        <div className="dashboard-header-left">
-          <Video size={22} color="var(--accent)" />
-          <span>WebRTC Meet</span>
-        </div>
-        <div className="dashboard-header-right">
-          {user && (
-            <div className="dashboard-user-info">
-              <img src={user.picture} alt={user.name} style={{ width: 28, height: 28, borderRadius: '50%' }} referrerPolicy="no-referrer" />
-              <span className="dashboard-user-name">{user.name}</span>
-            </div>
-          )}
-          <button onClick={handleLogout} className="dashboard-logout-btn">
-            <LogOut size={14} />
-            <span>ログアウト</span>
-          </button>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="dashboard-main">
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}

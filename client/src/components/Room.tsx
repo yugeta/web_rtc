@@ -5,6 +5,7 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Mo
 import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
 import ChatPanel from './ChatPanel';
+import AppHeader from './AppHeader';
 
 interface RoomProps {
   roomId: string;
@@ -990,13 +991,13 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
 
   return (
     <div className="room-container">
-      <div className="room-header">
-        <h2>Room: {roomName || roomId}</h2>
-        <div className="room-user-count">
+      <AppHeader center={
+        <>
+          <span>{roomName || roomId}</span>
           <span style={{ fontVariantNumeric: 'tabular-nums' }}>⏱ {elapsedTime}</span>
-          <span style={{ marginLeft: '12px' }}>👤 {peers.length + 1}</span>
-        </div>
-      </div>
+          <span>👤 {peers.length + 1}</span>
+        </>
+      } />
 
       <div className="room-content">
         <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Room from '../components/Room';
 import PreJoin from '../components/PreJoin';
+import AppHeader from '../components/AppHeader';
 import type { MediaSettings } from '../components/PreJoin';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -97,6 +98,7 @@ export default function RoomPage() {
   if (loading) {
     return (
       <div className="home-container">
+        <AppHeader />
         <div className="glass-panel">
           <p>読み込み中...</p>
         </div>
@@ -107,6 +109,7 @@ export default function RoomPage() {
   if (error || !roomExists) {
     return (
       <div className="home-container">
+        <AppHeader />
         <div className="glass-panel">
           <h1>Room が見つかりません</h1>
           <p>{error || 'この Room は存在しません'}</p>
@@ -146,6 +149,7 @@ export default function RoomPage() {
   // Name entry form (no room ID input needed — it comes from URL)
   return (
     <div className="home-container">
+      <AppHeader />
       <div className="glass-panel">
         <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           {roomName ? `「${roomName}」Room に入る` : 'Room に入る'}
