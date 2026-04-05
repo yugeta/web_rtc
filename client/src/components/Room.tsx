@@ -8,6 +8,7 @@ import ChatPanel from './ChatPanel';
 
 interface RoomProps {
   roomId: string;
+  roomName?: string;
   userName: string;
   initialSettings?: {
     isAudioEnabled: boolean;
@@ -124,7 +125,7 @@ const VideoPlayer = ({
   );
 };
 
-const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave }) => {
+const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings, onLeave }) => {
   const [peers, setPeers] = useState<PeerData[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(initialSettings?.isVideoEnabled ?? true);
@@ -144,7 +145,6 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   // スピーカー選択用のState
   const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>(initialSettings?.outputDeviceId || '');
-  const [showOutputMenu, setShowOutputMenu] = useState(false);
 
   // 画面共有関連のState
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
@@ -155,6 +155,8 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState('00:00');
+  const roomStartedAtRef = useRef<string | null>(null);
   const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   const socketRef = useRef<Socket | null>(null);
@@ -335,6 +337,11 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         // 3. ルーム参加（ユーザー名も送信）
         socketRef.current.emit('join-room', { roomId, userName });
 
+        // Room 開始時刻を受信
+        socketRef.current.on('room-started-at', (startedAt: string) => {
+          roomStartedAtRef.current = startedAt;
+        });
+
         // 4. すでに居るユーザー全員に対してPeerを作成 (発信側)
         socketRef.current.on('all-users', (usersInRoom: Array<{ userId: string, userName: string }>) => {
           console.log('[all-users] Received users:', usersInRoom);
@@ -437,6 +444,22 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       localStreamRef.current = null;
     };
   }, [roomId]);
+
+  // 経過時間カウントアップ
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const startedAt = roomStartedAtRef.current;
+      if (!startedAt) return;
+      const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      if (diff < 0) return;
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setElapsedTime(h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Peer作成（自分が発信する場合）
   const createPeer = (targetUserId: string, callerId: string, stream: MediaStream) => {
@@ -959,7 +982,6 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       }
       
       setSelectedOutputDeviceId(deviceId);
-      setShowOutputMenu(false);
     } catch (err) {
       console.error('Failed to change output device:', err);
       alert('スピーカーの切り替えに失敗しました。ブラウザがこの機能をサポートしているか確認してください。');
@@ -969,14 +991,15 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   return (
     <div className="room-container">
       <div className="room-header">
-        <h2>Room: {roomId}</h2>
+        <h2>Room: {roomName || roomId}</h2>
         <div className="room-user-count">
-          {peers.length + 1} users connected
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>⏱ {elapsedTime}</span>
+          <span style={{ marginLeft: '12px' }}>👤 {peers.length + 1}</span>
         </div>
       </div>
 
       <div className="room-content">
-        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`}>
+        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>
           {/* 画面共有表示 */}
           {screenSharingUserId && (() => {
             // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
@@ -1033,6 +1056,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         <div className="desktop-controls">
           {/* グループ1: デバイス設定 */}
           <div className="controls-group-devices">
+            {/* Mic ボタン + 統合デバイス選択メニュー */}
             <div className="control-group">
               <div className="control-btn-wrapper">
                 {localStream && (
@@ -1055,15 +1079,15 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
               <div>
                 <button 
                   className="icon-small" 
-                  onClick={() => setShowAudioMenu(!showAudioMenu)}
-                  title="Select Microphone"
+                  onClick={() => { setShowAudioMenu(!showAudioMenu); setShowVideoMenu(false); }}
+                  title="Audio Settings"
                 >
                   <ChevronUp size={16} />
                 </button>
                 
                 {showAudioMenu && (
                   <div className="device-menu">
-                    <div className="device-menu-title">Select Microphone</div>
+                    <div className="device-menu-title">マイク</div>
                     {audioDevices.length > 0 ? (
                       audioDevices.map((device, idx) => (
                         <div 
@@ -1077,11 +1101,36 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                     ) : (
                       <div className="device-menu-item empty">No devices found</div>
                     )}
+                    <div className="device-menu-divider" />
+                    <div className="device-menu-title">スピーカー</div>
+                    {audioOutputDevices.length > 0 ? (
+                      audioOutputDevices.map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeOutputDevice(device.deviceId)}
+                        >
+                          {device.label || `Speaker ${idx + 1}`}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="device-menu-item empty">No devices found</div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Speaker ミュートボタン（デバイス選択なし） */}
+            <button 
+              className={`icon icon-small-standalone ${!isSpeakerEnabled ? 'active' : ''}`} 
+              onClick={toggleSpeaker}
+              title="Toggle Speaker"
+            >
+              {isSpeakerEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+
+            {/* Video ボタン + カメラ選択メニュー */}
             <div className="control-group">
               <div className="control-btn-wrapper">
                 <button 
@@ -1096,7 +1145,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
               <div>
                 <button 
                   className="icon-small" 
-                  onClick={() => setShowVideoMenu(!showVideoMenu)}
+                  onClick={() => { setShowVideoMenu(!showVideoMenu); setShowAudioMenu(false); }}
                   title="Select Camera"
                 >
                   <ChevronUp size={16} />
@@ -1104,7 +1153,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                 
                 {showVideoMenu && (
                   <div className="device-menu">
-                    <div className="device-menu-title">Select Camera</div>
+                    <div className="device-menu-title">カメラ</div>
                     {videoDevices.length > 0 ? (
                       videoDevices.map((device, idx) => (
                         <div 
@@ -1113,47 +1162,6 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                           onClick={() => changeVideoDevice(device.deviceId)}
                         >
                           {device.label || `Camera ${idx + 1}`}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="device-menu-item empty">No devices found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="control-group">
-              <div className="control-btn-wrapper">
-                <button 
-                  className={`icon ${!isSpeakerEnabled ? 'active' : ''}`} 
-                  onClick={toggleSpeaker}
-                  title="Toggle Speaker"
-                >
-                  {isSpeakerEnabled ? <Volume2 /> : <VolumeX />}
-                </button>
-              </div>
-              
-              <div>
-                <button 
-                  className="icon-small" 
-                  onClick={() => setShowOutputMenu(!showOutputMenu)}
-                  title="Select Speaker"
-                >
-                  <ChevronUp size={16} />
-                </button>
-                
-                {showOutputMenu && (
-                  <div className="device-menu">
-                    <div className="device-menu-title">Select Speaker</div>
-                    {audioOutputDevices.length > 0 ? (
-                      audioOutputDevices.map((device, idx) => (
-                        <div 
-                          key={device.deviceId || String(idx)} 
-                          className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
-                          onClick={() => changeOutputDevice(device.deviceId)}
-                        >
-                          {device.label || `Speaker ${idx + 1}`}
                         </div>
                       ))
                     ) : (
@@ -1272,30 +1280,6 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
               )}
             </div>
 
-            {/* カメラ */}
-            <div className="mobile-menu-item">
-              <button 
-                className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
-                onClick={toggleVideo}
-              >
-                {isVideoEnabled ? <Video /> : <VideoOff />}
-              </button>
-              <span className="mobile-menu-label">カメラ</span>
-              {videoDevices.length > 1 && (
-                <select 
-                  className="mobile-device-select"
-                  value={selectedVideoDeviceId}
-                  onChange={e => changeVideoDevice(e.target.value)}
-                >
-                  {videoDevices.map((device, idx) => (
-                    <option key={device.deviceId || String(idx)} value={device.deviceId}>
-                      {device.label || `Camera ${idx + 1}`}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
             {/* スピーカー */}
             <div className="mobile-menu-item">
               <button 
@@ -1314,6 +1298,30 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                   {audioOutputDevices.map((device, idx) => (
                     <option key={device.deviceId || String(idx)} value={device.deviceId}>
                       {device.label || `Speaker ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* カメラ */}
+            <div className="mobile-menu-item">
+              <button 
+                className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
+                onClick={toggleVideo}
+              >
+                {isVideoEnabled ? <Video /> : <VideoOff />}
+              </button>
+              <span className="mobile-menu-label">カメラ</span>
+              {videoDevices.length > 1 && (
+                <select 
+                  className="mobile-device-select"
+                  value={selectedVideoDeviceId}
+                  onChange={e => changeVideoDevice(e.target.value)}
+                >
+                  {videoDevices.map((device, idx) => (
+                    <option key={device.deviceId || String(idx)} value={device.deviceId}>
+                      {device.label || `Camera ${idx + 1}`}
                     </option>
                   ))}
                 </select>

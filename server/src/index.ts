@@ -74,6 +74,8 @@ server.on('error', (err) => {
 const roomUsers: Record<string, Array<{ socketId: string, userName: string }>> = {};
 // Socket ID -> { roomId, userName }
 const socketRoomMap: Record<string, { roomId: string, userName: string }> = {};
+// RoomId -> 開始時刻（最初のユーザーが入室した時刻）
+const roomStartedAt: Record<string, string> = {};
 
 io.on('connection', (socket: Socket) => {
   console.log(`User connected: ${socket.id}`);
@@ -89,6 +91,11 @@ io.on('connection', (socket: Socket) => {
     
     if (!roomUsers[roomId]) {
       roomUsers[roomId] = [];
+    }
+    
+    // 最初のユーザーが入室した時刻を記録
+    if (!roomStartedAt[roomId]) {
+      roomStartedAt[roomId] = new Date().toISOString();
     }
     
     // 重複を避ける
@@ -114,6 +121,7 @@ io.on('connection', (socket: Socket) => {
         userName: u.userName
       }));
     socket.emit('all-users', usersInThisRoom);
+    socket.emit('room-started-at', roomStartedAt[roomId]);
 
     // Send chat history to the joining user
     const history = getHistory(roomId);
@@ -164,6 +172,7 @@ io.on('connection', (socket: Socket) => {
         if (roomUsers[roomId]?.length === 0) {
           archiveLog(roomId);
           delete roomUsers[roomId];
+          delete roomStartedAt[roomId];
         }
         
         // 部屋の残りのユーザーに退出を通知
