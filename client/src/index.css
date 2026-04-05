@@ -199,11 +199,21 @@ input:focus {
   display: grid;
   gap: 16px;
   padding: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   align-content: center;
   justify-content: center;
   overflow-y: auto;
 }
+
+/* 人数に応じたグリッドレイアウト */
+.video-grid[data-count="2"] { grid-template-columns: 1fr 1fr; }
+.video-grid[data-count="3"],
+.video-grid[data-count="4"] { grid-template-columns: 1fr 1fr; }
+.video-grid[data-count="5"],
+.video-grid[data-count="6"] { grid-template-columns: 1fr 1fr 1fr; }
+.video-grid[data-count="7"],
+.video-grid[data-count="8"],
+.video-grid[data-count="9"] { grid-template-columns: 1fr 1fr 1fr; }
 
 .video-wrapper {
   position: relative;
@@ -803,7 +813,16 @@ button.icon[data-disabled="true"] {
   .video-grid {
     gap: 8px;
     padding: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .video-grid[data-count="3"],
+  .video-grid[data-count="4"],
+  .video-grid[data-count="5"],
+  .video-grid[data-count="6"],
+  .video-grid[data-count="7"],
+  .video-grid[data-count="8"],
+  .video-grid[data-count="9"] {
+    grid-template-columns: 1fr 1fr;
   }
 
   .video-wrapper {
@@ -846,6 +865,17 @@ button.icon[data-disabled="true"] {
     grid-template-columns: 1fr;
     align-content: stretch;
     overflow: hidden;
+  }
+
+  .video-grid[data-count="2"] { grid-template-columns: 1fr 1fr; }
+  .video-grid[data-count="3"],
+  .video-grid[data-count="4"],
+  .video-grid[data-count="5"],
+  .video-grid[data-count="6"],
+  .video-grid[data-count="7"],
+  .video-grid[data-count="8"],
+  .video-grid[data-count="9"] {
+    grid-template-columns: 1fr 1fr;
   }
 
   .video-wrapper {
@@ -948,7 +978,16 @@ button.icon[data-disabled="true"] {
   .video-grid {
     gap: 6px;
     padding: 6px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .video-grid[data-count="3"],
+  .video-grid[data-count="4"],
+  .video-grid[data-count="5"],
+  .video-grid[data-count="6"],
+  .video-grid[data-count="7"],
+  .video-grid[data-count="8"],
+  .video-grid[data-count="9"] {
+    grid-template-columns: 1fr 1fr;
   }
 
   .controls-bar {

@@ -999,7 +999,7 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
       </div>
 
       <div className="room-content">
-        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`}>
+        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>
           {/* 画面共有表示 */}
           {screenSharingUserId && (() => {
             // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
