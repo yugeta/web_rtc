@@ -70,6 +70,7 @@
 #### 2. シグナリングサーバー（Node.js + Express）
 
 **ホスト:** `sock.mynt.work`
+**サーバー上の配置先:** `/var/www/web_rtc/server/`
 
 **役割:**
 
@@ -83,6 +84,8 @@
 - `signal`: WebRTCシグナル（Offer/Answer/ICE Candidate）の中継
 - `user-connected`: 新規ユーザー参加の通知
 - `user-disconnected`: ユーザー退出の通知
+
+> ソースコードは `server/` ディレクトリにあります。`sock/` フォルダは以前の別プロジェクトのもので、本プロジェクトでは使用しません。
 
 #### 3. STUN/TURNサーバー（coturn）
 

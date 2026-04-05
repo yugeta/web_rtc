@@ -1,83 +1,45 @@
-# WebRTC ビデオ通話アプリケーション
+# ドキュメント
 
-リアルタイムビデオ・音声通話を実現するWebRTCベースのアプリケーションです。
+## 目次
 
-## 📚 ドキュメント
+### はじめに
 
-- [プロジェクト概要](./overview.md) - アーキテクチャと技術スタック
-- [機能仕様](./features.md) - 実装されている機能の詳細
-- [ローカル開発環境構築](./local-setup.md) - 開発環境のセットアップ手順
-- [本番環境デプロイ](./production-deployment.md) - 本番サーバーへのデプロイ手順
-- [トラブルシューティング](./troubleshooting.md) - よくある問題と解決方法
+| ドキュメント | 内容 |
+|---|---|
+| [プロジェクト概要](./overview.md) | システム構成図、サーバー構成、コンポーネント構成、データフロー、セキュリティ考慮事項 |
+| [機能仕様](./features.md) | 実装済み機能の詳細、未実装機能の一覧、ブラウザ互換性、パフォーマンス要件 |
 
-## クイックスタート
+### 開発
 
-### ローカル開発（Docker使用）
+| ドキュメント | 内容 |
+|---|---|
+| [ローカル開発環境構築](./local-setup.md) | Docker / ローカル直接実行のセットアップ、環境変数、開発ワークフロー、テスト方法 |
 
-```bash
-# リポジトリをクローン
-git clone <repository-url>
-cd <project-directory>
+### デプロイ
 
-# Docker Composeで起動
-docker-compose up
+| ドキュメント | 内容 |
+|---|---|
+| [VPSデプロイ手順](./deployment.md) | Ubuntu VPS への初回セットアップ全手順（Node.js, PM2/systemd, Nginx, SSL, ファイアウォール） |
+| [本番環境デプロイ](./production-deployment.md) | 現在の本番構成サマリーと日常の更新手順 |
 
-# ブラウザでアクセス
-# クライアント: http://localhost:5173
-# サーバー: http://localhost:3001
-```
+### 運用
 
-### ローカル開発（Docker不使用）
+| ドキュメント | 内容 |
+|---|---|
+| [トラブルシューティング](./troubleshooting.md) | クライアント/サーバー/接続/パフォーマンスの問題と解決方法 |
 
-```bash
-# サーバーを起動
-cd server
-npm install
-npm run dev
-
-# 別のターミナルでクライアントを起動
-cd client
-npm install
-npm run dev
-```
-
-## プロジェクト構成
+## 本番環境の構成
 
 ```
-.
-├── client/              # Reactフロントエンド
-│   ├── src/
-│   │   ├── components/  # Reactコンポーネント
-│   │   ├── App.tsx      # メインアプリケーション
-│   │   └── main.tsx     # エントリーポイント
-│   └── package.json
-├── server/              # Node.jsバックエンド
-│   ├── src/
-│   │   └── index.ts     # シグナリングサーバー
-│   └── package.json
-├── docs/                # ドキュメント
-└── docker-compose.yml   # Docker設定
+クライアント:  yugeta.github.io/web_rtc/  (GitHub Pages, 自動デプロイ)
+シグナリング:  sock.mynt.work             (VPS, Node.js + Nginx リバースプロキシ)
+STUN/TURN:    stun.mynt.work             (VPS, coturn)
 ```
 
-## 技術スタック
+## 読む順番の目安
 
-### フロントエンド
-- React 19.2
-- TypeScript 5.9
-- Vite 7.3
-- Socket.IO Client 4.8
-- Simple-Peer 9.11
-- Lucide React (アイコン)
-
-### バックエンド
-- Node.js 20
-- Express 5.2
-- Socket.IO 4.8
-- TypeScript 5.9
-
-## ライセンス
-
-ISC
-
-# Demo
-> https://yugeta.github.io/web_rtc/
+1. [プロジェクト概要](./overview.md) でアーキテクチャを把握
+2. [ローカル開発環境構築](./local-setup.md) で手元で動かす
+3. [機能仕様](./features.md) で実装内容を確認
+4. デプロイ時は [VPSデプロイ手順](./deployment.md) → [本番環境デプロイ](./production-deployment.md)
+5. 問題が起きたら [トラブルシューティング](./troubleshooting.md)

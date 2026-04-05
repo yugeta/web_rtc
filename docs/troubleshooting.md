@@ -224,7 +224,8 @@ npm install --save-dev @types/node @types/express @types/cors
 Access to XMLHttpRequest has been blocked by CORS policy
 
 解決方法:
-server/src/index.ts で CORS設定を確認:
+
+1. server/src/index.ts で CORS設定を確認:
 
 const io = new Server(server, {
   cors: {
@@ -233,6 +234,31 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
+
+2. Nginx経由の場合、NginxがCORSヘッダーを通していない可能性がある。
+   Nginx設定にOPTIONSプリフライト対応とproxy_pass_headerを追加:
+
+location / {
+    if ($request_method = 'OPTIONS') {
+        add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
+        add_header 'Access-Control-Max-Age' 1728000;
+        add_header 'Content-Type' 'text/plain; charset=utf-8';
+        add_header 'Content-Length' 0;
+        return 204;
+    }
+
+    proxy_pass http://127.0.0.1:3001;
+    proxy_pass_header Access-Control-Allow-Origin;
+    proxy_pass_header Access-Control-Allow-Methods;
+    proxy_pass_header Access-Control-Allow-Headers;
+    proxy_pass_header Access-Control-Allow-Credentials;
+    # ...
+}
+
+   詳細は deployment.md の Nginx設定を参照。
 ```
 
 **2. サーバーURLが間違っている**
@@ -317,8 +343,9 @@ chrome://webrtc-internals/ で接続状態を確認
 - 企業ネットワーク
 
 解決方法:
-- TURN/STUNサーバーを設定（将来的な対応）
-- 別のネットワークで試す
+- 本プロジェクトではSTUN/TURNサーバー（stun.mynt.work）が設定済み
+- Google STUN → 自前STUN → TURN → TURNS の順でフォールバック
+- 企業ネットワーク等でブロックされる場合は別のネットワークで試す
 ```
 
 **3. ブラウザの互換性問題**
