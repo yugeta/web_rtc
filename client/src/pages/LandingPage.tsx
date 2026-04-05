@@ -8,30 +8,15 @@ export default function LandingPage() {
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
 
-  if (auth.isLoading) {
-    return null;
-  }
-
-  if (auth.isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (auth.isLoading) return null;
+  if (auth.isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     setError(null);
     const credential = credentialResponse.credential;
-    if (!credential) {
-      setError('Google ログインに失敗しました。もう一度お試しください。');
-      return;
-    }
-    try {
-      await auth.login(credential);
-    } catch {
-      setError('ログインに失敗しました。もう一度お試しください。');
-    }
-  };
-
-  const handleError = () => {
-    setError('Google ログインに失敗しました。もう一度お試しください。');
+    if (!credential) { setError('Google ログインに失敗しました。もう一度お試しください。'); return; }
+    try { await auth.login(credential); }
+    catch { setError('ログインに失敗しました。もう一度お試しください。'); }
   };
 
   return (
@@ -44,15 +29,9 @@ export default function LandingPage() {
         </div>
         <h1>WebRTC Meet</h1>
         <p>シンプルで高速なビデオ会議</p>
-
-        {error && (
-          <p style={{ color: 'var(--danger)', fontSize: '14px', marginBottom: '16px' }}>
-            {error}
-          </p>
-        )}
-
+        {error && <p style={{ color: 'var(--danger)', fontSize: '14px', marginBottom: '16px' }}>{error}</p>}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <GoogleLogin onSuccess={handleSuccess} onError={handleError} />
+          <GoogleLogin onSuccess={handleSuccess} onError={() => setError('Google ログインに失敗しました。もう一度お試しください。')} />
         </div>
       </div>
     </div>

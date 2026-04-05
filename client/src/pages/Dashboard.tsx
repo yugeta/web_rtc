@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Copy, LogOut, Video, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
 
@@ -16,8 +15,7 @@ interface Room {
 }
 
 export default function Dashboard() {
-  const { token, user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { token } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoomName, setNewRoomName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -81,35 +79,13 @@ export default function Dashboard() {
     } catch { setError('URL のコピーに失敗しました'); }
   };
 
-  const handleLogout = () => { logout(); navigate('/'); };
-
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100vh' }}>
-      <header className="dashboard-header">
-        <div className="dashboard-header-left">
-          <Video size={22} color="var(--accent)" />
-          <span>WebRTC Meet</span>
-        </div>
-        <div className="dashboard-header-right">
-          {user && (
-            <div className="dashboard-user-info">
-              <img src={user.picture} alt={user.name} style={{ width: 28, height: 28, borderRadius: '50%' }} referrerPolicy="no-referrer" />
-              <span className="dashboard-user-name">{user.name}</span>
-            </div>
-          )}
-          <button onClick={handleLogout} className="dashboard-logout-btn">
-            <LogOut size={14} />
-            <span>ログアウト</span>
-          </button>
-        </div>
-      </header>
-
-      <main className="dashboard-main">
+    <main className="dashboard-main">
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 
         <form onSubmit={handleCreateRoom} className="dashboard-create-form">
@@ -132,7 +108,7 @@ export default function Dashboard() {
                   <div className="dashboard-room-date">{formatDate(room.createdAt)}</div>
                 </div>
                 <div className="dashboard-room-actions">
-                  <button onClick={() => navigate(`/room/${room.id}`)} title="Room に参加" className="primary">
+                  <button onClick={() => window.open(`/web_rtc/room/${room.id}`, '_blank')} title="Room に参加" className="primary">
                     <ExternalLink size={13} /><span className="btn-label">Room に行く</span>
                   </button>
                   <button onClick={() => handleCopyUrl(room.id)} title="参加用 URL をコピー" style={{ background: copiedId === room.id ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border)' }}>
@@ -147,6 +123,5 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-    </div>
   );
 }
