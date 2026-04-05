@@ -1,15 +1,13 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Video, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useHeader } from '../contexts/HeaderContext';
 import './AppHeader.css';
 
-interface AppHeaderProps {
-  center?: ReactNode;
-}
-
-export default function AppHeader({ center }: AppHeaderProps) {
+export default function AppHeader() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { center } = useHeader();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

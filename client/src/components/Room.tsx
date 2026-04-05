@@ -5,7 +5,7 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Mo
 import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
 import ChatPanel from './ChatPanel';
-import AppHeader from './AppHeader';
+import { useHeader } from '../contexts/HeaderContext';
 
 interface RoomProps {
   roomId: string;
@@ -127,6 +127,7 @@ const VideoPlayer = ({
 };
 
 const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings, onLeave }) => {
+  const { setCenter } = useHeader();
   const [peers, setPeers] = useState<PeerData[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(initialSettings?.isVideoEnabled ?? true);
@@ -461,6 +462,18 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // ヘッダーの center にRoom情報を表示
+  useEffect(() => {
+    setCenter(
+      <>
+        <span>{roomName || roomId}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>⏱ {elapsedTime}</span>
+        <span>👤 {peers.length + 1}</span>
+      </>
+    );
+    return () => setCenter(null);
+  }, [roomName, roomId, elapsedTime, peers.length, setCenter]);
 
   // Peer作成（自分が発信する場合）
   const createPeer = (targetUserId: string, callerId: string, stream: MediaStream) => {
@@ -991,13 +1004,6 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
 
   return (
     <div className="room-container">
-      <AppHeader center={
-        <>
-          <span>{roomName || roomId}</span>
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>⏱ {elapsedTime}</span>
-          <span>👤 {peers.length + 1}</span>
-        </>
-      } />
 
       <div className="room-content">
         <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>

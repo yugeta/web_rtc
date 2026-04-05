@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import AppHeader from '../components/AppHeader';
 import './Dashboard.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -18,7 +16,6 @@ interface Room {
 
 export default function Dashboard() {
   const { token } = useAuth();
-  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoomName, setNewRoomName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +85,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100vh' }}>
-      <AppHeader />
-
-      <main className="dashboard-main">
+    <main className="dashboard-main">
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 
         <form onSubmit={handleCreateRoom} className="dashboard-create-form">
@@ -114,7 +108,7 @@ export default function Dashboard() {
                   <div className="dashboard-room-date">{formatDate(room.createdAt)}</div>
                 </div>
                 <div className="dashboard-room-actions">
-                  <button onClick={() => navigate(`/room/${room.id}`)} title="Room に参加" className="primary">
+                  <button onClick={() => window.open(`/web_rtc/room/${room.id}`, '_blank')} title="Room に参加" className="primary">
                     <ExternalLink size={13} /><span className="btn-label">Room に行く</span>
                   </button>
                   <button onClick={() => handleCopyUrl(room.id)} title="参加用 URL をコピー" style={{ background: copiedId === room.id ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border)' }}>
@@ -129,6 +123,5 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-    </div>
   );
 }
