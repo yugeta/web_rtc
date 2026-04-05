@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import { ensureDirectories, appendMessage, getHistory, archiveLog } from './chatLogManager';
+import { startScheduler } from './archiveScanner';
 
 const app = express();
 app.use(cors({
@@ -12,7 +14,7 @@ app.use(cors({
 }));
 
 // OPTIONSプリフライトに明示的に応答
-app.options('*', cors());
+app.options('{*path}', cors());
 
 const server = createServer(app);
 const io = new Server(server, {
@@ -79,6 +81,12 @@ io.on('connection', (socket: Socket) => {
         userName: u.userName
       }));
     socket.emit('all-users', usersInThisRoom);
+
+    // Send chat history to the joining user
+    const history = getHistory(roomId);
+    if (history.length > 0) {
+      socket.emit('chat-history', history);
+    }
   });
 
   // WebRTC Signaling (Unified)
@@ -94,6 +102,21 @@ io.on('connection', (socket: Socket) => {
   // Note: Track state changes are now handled via WebRTC DataChannel (P2P)
   // No server-side state management needed
 
+  // Chat message
+  socket.on('chat-message', (payload: { message: string }) => {
+    const userInfo = socketRoomMap[socket.id];
+    if (!userInfo) return;
+
+    const chatMessage = {
+      userName: userInfo.userName,
+      message: payload.message,
+      timestamp: Date.now()
+    };
+
+    appendMessage(userInfo.roomId, chatMessage);
+    io.to(userInfo.roomId).emit('chat-message', chatMessage);
+  });
+
   // Disconnect
   socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
@@ -106,6 +129,7 @@ io.on('connection', (socket: Socket) => {
       if (usersInRoom) {
         roomUsers[roomId] = usersInRoom.filter(u => u.socketId !== socket.id);
         if (roomUsers[roomId]?.length === 0) {
+          archiveLog(roomId);
           delete roomUsers[roomId];
         }
         
@@ -123,6 +147,10 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+
+ensureDirectories();
+startScheduler();
+
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
