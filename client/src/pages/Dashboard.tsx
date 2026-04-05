@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchRooms = useCallback(async () => {
+    if (!token) return;
     try {
       const res = await fetch(`${SERVER_URL}/api/rooms`, {
         headers: { 'Authorization': 'Bearer ' + token },
