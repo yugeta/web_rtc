@@ -25,7 +25,8 @@ ssh ubuntu@<VPSのIPアドレス>
 cd /var/www/web_rtc
 git pull origin main
 cd server
-npm install --production
+npm install
+npm run build
 
 # PM2使用時
 pm2 restart webrtc-server
