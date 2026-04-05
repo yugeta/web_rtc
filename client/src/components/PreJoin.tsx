@@ -173,10 +173,6 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
       
       setLocalStream(stream);
       localStreamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
     } catch (err) {
       console.error('Failed to get media:', err);
       alert('カメラ、またはマイクへのアクセスが拒否されました。');
@@ -191,6 +187,13 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
       }
     };
   }, []);
+
+  // localStreamが変わったらvideoRefに反映
+  useEffect(() => {
+    if (videoRef.current && localStream) {
+      videoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
 
   const toggleAudio = () => {
     if (localStream) {
@@ -350,10 +353,31 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
               height: '100%',
               objectFit: 'cover',
               transform: 'scaleX(-1)',
-              display: isVideoEnabled ? 'block' : 'none'
+              display: (localStream && isVideoEnabled) ? 'block' : 'none'
             }}
           />
-          {!isVideoEnabled && (
+          {!localStream && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              color: 'var(--text-muted)'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                border: '3px solid rgba(255,255,255,0.1)',
+                borderTop: '3px solid var(--accent)',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 12px'
+              }} />
+              <div>カメラを準備しています...</div>
+            </div>
+          )}
+          {localStream && !isVideoEnabled && (
             <div style={{
               position: 'absolute',
               top: '50%',

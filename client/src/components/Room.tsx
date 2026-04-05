@@ -135,6 +135,11 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState<string>(initialSettings?.audioDeviceId || '');
   const [showAudioMenu, setShowAudioMenu] = useState(false);
   
+  // カメラ選択用のState
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState<string>(initialSettings?.videoDeviceId || '');
+  const [showVideoMenu, setShowVideoMenu] = useState(false);
+  
   // スピーカー選択用のState
   const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>(initialSettings?.outputDeviceId || '');
@@ -275,9 +280,11 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         // デバイスリストの取得（再取得して最新の状態を反映）
         const updatedDevices = await navigator.mediaDevices.enumerateDevices();
         const updatedAudioInputs = updatedDevices.filter(d => d.kind === 'audioinput');
+        const updatedVideoInputs = updatedDevices.filter(d => d.kind === 'videoinput');
         const updatedAudioOutputs = updatedDevices.filter(d => d.kind === 'audiooutput');
         
         setAudioDevices(updatedAudioInputs);
+        setVideoDevices(updatedVideoInputs);
         setAudioOutputDevices(updatedAudioOutputs);
         
         // 選択したデバイスIDを設定
@@ -301,6 +308,18 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
           setSelectedOutputDeviceId(initialSettings.outputDeviceId);
         } else if (updatedAudioOutputs.length > 0) {
           setSelectedOutputDeviceId(updatedAudioOutputs[0].deviceId || 'default');
+        }
+
+        // デフォルトのビデオデバイスを設定
+        if (initialSettings?.videoDeviceId) {
+          setSelectedVideoDeviceId(initialSettings.videoDeviceId);
+        } else if (updatedVideoInputs.length > 0) {
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack && videoTrack.getSettings().deviceId) {
+            setSelectedVideoDeviceId(videoTrack.getSettings().deviceId!);
+          } else {
+            setSelectedVideoDeviceId(updatedVideoInputs[0].deviceId);
+          }
         }
 
         // 2. Socket接続
@@ -822,6 +841,54 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
     }
   };
 
+  // カメラデバイスの切り替え
+  const changeVideoDevice = async (deviceId: string) => {
+    if (!deviceId) return;
+    
+    try {
+      const constraints = {
+        audio: false,
+        video: deviceId === 'default' ? true : { deviceId: deviceId }
+      };
+      
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      
+      if (localStreamRef.current && newVideoTrack) {
+        const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+        
+        if (oldVideoTrack) {
+          localStreamRef.current.removeTrack(oldVideoTrack);
+          
+          // 全ての接続先Peerに対してTrackを差し替える
+          Object.values(peersRef.current).forEach(peer => {
+            if (!peer.destroyed) {
+              peer.replaceTrack(oldVideoTrack, newVideoTrack, localStreamRef.current!);
+            }
+          });
+          
+          oldVideoTrack.stop();
+        }
+        
+        localStreamRef.current.addTrack(newVideoTrack);
+        
+        // ミュート状態を引き継ぐ
+        newVideoTrack.enabled = isVideoEnabled;
+        
+        // Reactの再描画をトリガー
+        const updatedStream = new MediaStream(localStreamRef.current.getTracks());
+        setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
+        
+        setSelectedVideoDeviceId(deviceId);
+        setShowVideoMenu(false);
+      }
+    } catch (err) {
+      console.error('Failed to change video device:', err);
+      alert('カメラの切り替えに失敗しました。権限等をご確認ください。');
+    }
+  };
+
   const toggleAudio = () => {
     if (localStream) {
       const audioTrack = localStream.getAudioTracks()[0];
@@ -1001,13 +1068,48 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
           </div>
         </div>
 
-        <button 
-          className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
-          onClick={toggleVideo}
-          title="Toggle Video"
-        >
-          {isVideoEnabled ? <Video /> : <VideoOff />}
-        </button>
+        <div className="control-group">
+          <div className="control-btn-wrapper">
+            <button 
+              className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
+              onClick={toggleVideo}
+              title="Toggle Video"
+              style={{ zIndex: 1 }}
+            >
+              {isVideoEnabled ? <Video /> : <VideoOff />}
+            </button>
+          </div>
+          
+          {/* カメラ選択ドロップダウン */}
+          <div>
+            <button 
+              className="icon-small" 
+              onClick={() => setShowVideoMenu(!showVideoMenu)}
+              title="Select Camera"
+            >
+              <ChevronUp size={16} />
+            </button>
+            
+            {showVideoMenu && (
+              <div className="device-menu">
+                <div className="device-menu-title">Select Camera</div>
+                {videoDevices.length > 0 ? (
+                  videoDevices.map((device, idx) => (
+                    <div 
+                      key={device.deviceId || String(idx)} 
+                      className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
+                      onClick={() => changeVideoDevice(device.deviceId)}
+                    >
+                      {device.label || `Camera ${idx + 1}`}
+                    </div>
+                  ))
+                ) : (
+                  <div className="device-menu-item" style={{ opacity: 0.5 }}>No devices found</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* 画面共有ボタン */}
         {isScreenShareSupported && (
