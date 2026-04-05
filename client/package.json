@@ -11,10 +11,12 @@
     "test": "vitest --run"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.4",
     "@types/simple-peer": "^9.11.9",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-router-dom": "^7.14.0",
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.3"
   },
