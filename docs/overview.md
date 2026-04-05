@@ -52,7 +52,12 @@
 
 **主要コンポーネント:**
 
-- `App.tsx`: ルーム入室前の画面とルーム管理
+- `App.tsx`: ルーティング定義（react-router-dom）
+- `LandingPage.tsx`: Google ログイン画面
+- `Dashboard.tsx`: Room 管理画面（作成・一覧・削除・URL 共有）
+- `RoomPage.tsx`: Room 参加画面（Room 存在チェック → 名前入力 → PreJoin → Room）
+- `ProtectedRoute.tsx`: 認証ガードコンポーネント
+- `AuthContext.tsx`: 認証状態管理（JWT + ユーザー情報）
 - `Room.tsx`: ビデオ通話のメインコンポーネント
   - メディアデバイス管理（マイク、カメラ、スピーカー）
   - WebRTC接続管理（ICEサーバー: `stun.mynt.work`）
@@ -75,6 +80,9 @@
 **役割:**
 
 - WebRTCシグナリングサーバー
+- Google OAuth トークン検証 + JWT 発行（`/api/auth/google`）
+- Room 管理 REST API（`/api/rooms`）
+- Room データの JSON ファイル永続化
 - ルーム管理
 - ユーザー接続状態の管理
 
@@ -159,6 +167,9 @@ MediaStream (audio + video)
 4. **STUN/TURNサーバー**: Google公開STUN + `stun.mynt.work` でNAT越えに対応
 5. **TLS対応**: TURNS（ポート5349）でTLS経由のTURN接続をサポート
 6. **ICEフォールバック**: Google STUN → 自前STUN → TURN → TURNS の順で接続を試行
+7. **Google OAuth 認証**: Room 管理者は Google アカウントで認証
+8. **JWT 認証**: サーバー発行の JWT でAPI・Socket.IO 接続を保護
+9. **Room アクセス制御**: Room 管理 API は JWT 認証必須、Room 参加は認証不要
 
 ### 本番環境で必要な対策
 

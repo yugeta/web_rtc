@@ -16,7 +16,7 @@
 
 `main` ブランチに push すると GitHub Actions（`.github/workflows/deploy.yml`）が自動でビルド・デプロイします。
 
-環境変数 `VITE_SERVER_URL=https://sock.mynt.work` は workflow 内で設定済みです。
+環境変数 `VITE_SERVER_URL=https://sock.mynt.work` は workflow 内で設定済みです。`VITE_GOOGLE_CLIENT_ID` も GitHub リポジトリの Secrets に追加し、workflow で設定してください。
 
 ### シグナリングサーバー（手動）
 

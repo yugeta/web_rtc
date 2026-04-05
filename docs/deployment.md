@@ -179,8 +179,12 @@ cd /var/www/web_rtc/server
 cat > .env << 'EOF'
 PORT=3001
 NODE_ENV=production
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+JWT_SECRET=your-production-jwt-secret
 EOF
 ```
+
+> `GOOGLE_CLIENT_ID` は Google Cloud Console で取得した OAuth Client ID を設定。`JWT_SECRET` は `openssl rand -base64 32` 等で生成した十分に長いランダム文字列を使用してください。
 
 ### 5.4 クライアントのビルドと転送（ローカルPCで実行）
 
@@ -191,7 +195,10 @@ EOF
 ```bash
 # --- ローカルPCで実行 ---
 cd client
-echo 'VITE_SERVER_URL=https://sock.mynt.work' > .env.production
+cat > .env.production << 'EOF'
+VITE_SERVER_URL=https://sock.mynt.work
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+EOF
 npm install
 npm run build
 

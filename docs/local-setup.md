@@ -90,14 +90,112 @@ npm run dev
 
 ## 環境変数
 
-どちらの方法でも、デフォルト値が設定されているので通常は変更不要です。
+認証機能（Google OAuth）を動作させるには `.env` ファイルの作成が必須です。サーバーは `GOOGLE_CLIENT_ID` と `JWT_SECRET` が未設定だと起動時にエラーで終了します。
 
-| 変数 | ファイル | デフォルト値 | 説明 |
+### 一覧
+
+| 変数 | 設定先 | 必須 | 説明 |
 |---|---|---|---|
-| `VITE_SERVER_URL` | `client/.env` | `http://localhost:3001` | シグナリングサーバーのURL |
-| `PORT` | `server/.env` | `3001` | サーバーのリッスンポート |
+| `VITE_SERVER_URL` | `client/.env` | △ | シグナリングサーバーの URL（デフォルト: `http://localhost:3001`） |
+| `VITE_GOOGLE_CLIENT_ID` | `client/.env` | ○ | Google OAuth Client ID |
+| `PORT` | `server/.env` | △ | サーバーのリッスンポート（デフォルト: `3001`） |
+| `GOOGLE_CLIENT_ID` | `server/.env` | ○ | Google OAuth Client ID（トークン検証用） |
+| `JWT_SECRET` | `server/.env` | ○ | JWT 署名用シークレット |
 
-変更したい場合は各ディレクトリに `.env` ファイルを作成してください。
+### Google OAuth Client ID の取得
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成
+2. 「APIとサービス」→「認証情報」→「OAuth 2.0 クライアント ID」を作成
+   - アプリケーションの種類: ウェブ アプリケーション
+3. 「承認済みの JavaScript 生成元」に以下を追加:
+   - 開発用: `http://localhost:5173`
+   - 本番用: `https://yugeta.github.io`（GitHub Pages の場合）
+4. 作成後に表示される Client ID（`xxx.apps.googleusercontent.com` 形式）をコピー
+
+### .env ファイルの作成手順
+
+#### 方法1: Docker Compose の場合
+
+3 つのファイルを作成します。
+
+```bash
+# 1. プロジェクトルート/.env（docker-compose.yml が読み込む）
+cat > .env << 'EOF'
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+JWT_SECRET=your-random-secret-string-here
+EOF
+
+# 2. client/.env
+cat > client/.env << 'EOF'
+VITE_SERVER_URL=http://localhost:3001
+VITE_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+EOF
+
+# 3. server/.env（Docker Compose 経由で渡されるため通常は不要だが、直接起動時の保険として）
+cat > server/.env << 'EOF'
+PORT=3001
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+JWT_SECRET=your-random-secret-string-here
+EOF
+```
+
+`docker-compose.yml` は `${GOOGLE_CLIENT_ID}` / `${JWT_SECRET}` をルートの `.env` から読み込んでサーバーコンテナに渡します。
+
+#### 方法2: Node.js 直接起動の場合
+
+2 つのファイルを作成します。
+
+```bash
+# 1. server/.env
+cat > server/.env << 'EOF'
+PORT=3001
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+JWT_SECRET=your-random-secret-string-here
+EOF
+
+# 2. client/.env
+cat > client/.env << 'EOF'
+VITE_SERVER_URL=http://localhost:3001
+VITE_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+EOF
+```
+
+#### JWT_SECRET の生成
+
+十分に長いランダム文字列を使用してください。以下のコマンドで生成できます:
+
+```bash
+openssl rand -base64 32
+```
+
+### 本番環境の .env
+
+#### VPS（サーバー側）
+
+```bash
+# /var/www/web_rtc/server/.env
+PORT=3001
+NODE_ENV=production
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+JWT_SECRET=your-production-secret
+```
+
+#### GitHub Pages（クライアント側）
+
+`client/.env.production` は既にリポジトリに含まれています:
+
+```
+VITE_SERVER_URL=https://sock.mynt.work
+VITE_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+```
+
+GitHub Actions でビルドする場合は、リポジトリの Settings → Secrets and variables → Actions に `VITE_GOOGLE_CLIENT_ID` を追加し、workflow で `.env.production` に書き出すか、ビルドコマンドの環境変数として渡してください。
+
+### 注意事項
+
+- `.env` ファイルは `.gitignore` に含まれているため、リポジトリにはコミットされません
+- `GOOGLE_CLIENT_ID` と `VITE_GOOGLE_CLIENT_ID` の値は同じ Client ID です
+- サーバーは `GOOGLE_CLIENT_ID` または `JWT_SECRET` が未設定の場合、起動時にエラーメッセージを出力して終了します
 
 ---
 

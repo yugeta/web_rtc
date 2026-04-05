@@ -327,7 +327,10 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         }
 
         // 2. Socket接続
-        socketRef.current = io(SERVER_URL);
+        const token = localStorage.getItem('auth_token');
+        socketRef.current = io(SERVER_URL, {
+          auth: token ? { token } : undefined,
+        });
 
         // 3. ルーム参加（ユーザー名も送信）
         socketRef.current.emit('join-room', { roomId, userName });
