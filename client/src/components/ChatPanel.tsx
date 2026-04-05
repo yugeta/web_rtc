@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
-import { Send } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 
 export interface ChatMessage {
   userName: string;
@@ -13,6 +13,7 @@ interface ChatPanelProps {
   userName: string;
   isOpen: boolean;
   onUnreadCountChange: (count: number) => void;
+  onClose?: () => void;
 }
 
 const formatTime = (timestamp: number): string => {
@@ -20,7 +21,7 @@ const formatTime = (timestamp: number): string => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ socket, userName, isOpen, onUnreadCountChange }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ socket, userName, isOpen, onUnreadCountChange, onClose }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ socket, userName, isOpen, onUnrea
     <div className="chat-panel">
       <div className="chat-panel-header">
         <span className="chat-panel-title">Chat</span>
+        {onClose && (
+          <button className="chat-panel-close" onClick={onClose} title="Close chat">
+            <X size={20} />
+          </button>
+        )}
       </div>
 
       <div className="chat-messages">

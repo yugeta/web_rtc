@@ -1021,6 +1021,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
           userName={userName}
           isOpen={isChatOpen}
           onUnreadCountChange={setUnreadCount}
+          onClose={() => setIsChatOpen(false)}
         />
       </div>
 
@@ -1199,6 +1200,18 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
           {showMobileMenu ? <X /> : <Menu />}
         </button>
 
+        {/* モバイル用チャットボタン（スマホでのみ表示） */}
+        <button 
+          className={`icon mobile-chat-btn ${isChatOpen ? 'active' : ''}`}
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          title="チャット"
+        >
+          <MessageSquare />
+          {unreadCount > 0 && (
+            <span className="chat-badge">{unreadCount}</span>
+          )}
+        </button>
+
         <button 
           className="icon active leave-btn" 
           onClick={() => setShowLeaveConfirm(true)}
@@ -1308,23 +1321,6 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                 </span>
               </div>
             )}
-
-            {/* チャット */}
-            <div className="mobile-menu-item">
-              <button 
-                className={`icon ${isChatOpen ? 'active' : ''}`}
-                onClick={() => {
-                  setIsChatOpen(!isChatOpen);
-                  setShowMobileMenu(false);
-                }}
-              >
-                <MessageSquare />
-                {unreadCount > 0 && (
-                  <span className="chat-badge">{unreadCount}</span>
-                )}
-              </button>
-              <span className="mobile-menu-label">チャット</span>
-            </div>
           </div>
         </div>
       )}
