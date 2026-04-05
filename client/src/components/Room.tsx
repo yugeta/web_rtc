@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'simple-peer';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff, Menu, X } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff, Menu, X, MessageSquare } from 'lucide-react';
 import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
+import ChatPanel from './ChatPanel';
 
 interface RoomProps {
   roomId: string;
@@ -152,6 +153,8 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [screenSharingUserName, setScreenSharingUserName] = useState<string | null>(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   const socketRef = useRef<Socket | null>(null);
@@ -969,48 +972,56 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
         </div>
       </div>
 
-      <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`}>
-        {/* 画面共有表示 */}
-        {screenSharingUserId && (() => {
-          // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
-          const isLocalSharing = screenSharingUserId === socketRef.current?.id;
-          const shareStream = isLocalSharing
-            ? screenStream
-            : peers.find(p => p.peerId === screenSharingUserId)?.screenStream || null;
-          
-          return shareStream ? (
-            <ScreenShareView
-              stream={shareStream}
-              userName={screenSharingUserName || ''}
-            />
-          ) : null;
-        })()}
+      <div className="room-content">
+        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`}>
+          {/* 画面共有表示 */}
+          {screenSharingUserId && (() => {
+            // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
+            const isLocalSharing = screenSharingUserId === socketRef.current?.id;
+            const shareStream = isLocalSharing
+              ? screenStream
+              : peers.find(p => p.peerId === screenSharingUserId)?.screenStream || null;
+            
+            return shareStream ? (
+              <ScreenShareView
+                stream={shareStream}
+                userName={screenSharingUserName || ''}
+              />
+            ) : null;
+          })()}
 
-        {/* 自分 */}
-        {localStream && (
-          <VideoPlayer 
-            stream={localStream} 
-            isLocal 
-            label={userName}
-            outputDeviceId={selectedOutputDeviceId} 
-            isSpeakerEnabled={isSpeakerEnabled}
-            isAudioEnabled={isAudioEnabled}
-            isVideoEnabled={isVideoEnabled}
-          />
-        )}
-        
-        {/* 他参加者 */}
-        {peers.map((peer, idx) => (
-          <VideoPlayer 
-            key={peer.peerId} 
-            stream={peer.stream || null} 
-            label={peer.userName || `User ${idx + 1}`}
-            outputDeviceId={selectedOutputDeviceId}
-            isSpeakerEnabled={isSpeakerEnabled}
-            isAudioEnabled={peer.isAudioEnabled ?? true}
-            isVideoEnabled={peer.isVideoEnabled ?? true}
-          />
-        ))}
+          {/* 自分 */}
+          {localStream && (
+            <VideoPlayer 
+              stream={localStream} 
+              isLocal 
+              label={userName}
+              outputDeviceId={selectedOutputDeviceId} 
+              isSpeakerEnabled={isSpeakerEnabled}
+              isAudioEnabled={isAudioEnabled}
+              isVideoEnabled={isVideoEnabled}
+            />
+          )}
+          
+          {/* 他参加者 */}
+          {peers.map((peer, idx) => (
+            <VideoPlayer 
+              key={peer.peerId} 
+              stream={peer.stream || null} 
+              label={peer.userName || `User ${idx + 1}`}
+              outputDeviceId={selectedOutputDeviceId}
+              isSpeakerEnabled={isSpeakerEnabled}
+              isAudioEnabled={peer.isAudioEnabled ?? true}
+              isVideoEnabled={peer.isVideoEnabled ?? true}
+            />
+          ))}
+        </div>
+        <ChatPanel
+          socket={socketRef.current}
+          userName={userName}
+          isOpen={isChatOpen}
+          onUnreadCountChange={setUnreadCount}
+        />
       </div>
 
       <div className="controls-bar">
@@ -1164,6 +1175,19 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
               )}
             </div>
           </div>
+
+          <div className="control-btn-wrapper">
+            <button 
+              className={`icon ${isChatOpen ? 'active' : ''}`}
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              title="Chat"
+            >
+              <MessageSquare />
+              {unreadCount > 0 && (
+                <span className="chat-badge">{unreadCount}</span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* モバイル用ハンバーガーボタン（スマホでのみ表示） */}
@@ -1284,6 +1308,23 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
                 </span>
               </div>
             )}
+
+            {/* チャット */}
+            <div className="mobile-menu-item">
+              <button 
+                className={`icon ${isChatOpen ? 'active' : ''}`}
+                onClick={() => {
+                  setIsChatOpen(!isChatOpen);
+                  setShowMobileMenu(false);
+                }}
+              >
+                <MessageSquare />
+                {unreadCount > 0 && (
+                  <span className="chat-badge">{unreadCount}</span>
+                )}
+              </button>
+              <span className="mobile-menu-label">チャット</span>
+            </div>
           </div>
         </div>
       )}
