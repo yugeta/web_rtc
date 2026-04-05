@@ -119,6 +119,7 @@ export default function RoomPage() {
     return (
       <Room
         roomId={id}
+        roomName={roomName ?? undefined}
         userName={userName}
         initialSettings={mediaSettings}
         onLeave={() => {
@@ -135,6 +136,7 @@ export default function RoomPage() {
       <PreJoin
         userName={userName}
         roomId={id}
+        roomName={roomName ?? undefined}
         onJoin={handlePreJoinComplete}
         onCancel={handlePreJoinCancel}
       />

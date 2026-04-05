@@ -14,6 +14,7 @@ export type MediaSettings = {
 interface PreJoinProps {
   userName: string;
   roomId: string;
+  roomName?: string;
   onJoin: (settings: MediaSettings) => void;
   onCancel: () => void;
 }
@@ -35,7 +36,7 @@ const setCookie = (name: string, value: string, days: number = 365) => {
   document.cookie = `${name}=${value};${expires};path=/`;
 };
 
-const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel }) => {
+const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, onCancel }) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -327,7 +328,7 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
       <div className="glass-panel prejoin-panel">
         <h2 className="prejoin-title">会議に参加する準備</h2>
         <p className="prejoin-desc">
-          {userName} として {roomId} に参加します
+          {userName} として {roomName || roomId} に参加します
         </p>
         
         {/* ビデオプレビュー */}
