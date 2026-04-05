@@ -110,8 +110,8 @@ function App() {
   return (
     <div className="home-container">
       <div className="glass-panel">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-          <div style={{ background: 'var(--accent)', padding: '16px', borderRadius: '20px', display: 'inline-block' }}>
+        <div className="home-icon-wrapper">
+          <div className="home-icon-bg">
             <Video size={48} color="white" />
           </div>
         </div>
@@ -134,7 +134,7 @@ function App() {
             onChange={(e) => setRoomId(e.target.value)}
             required
           />
-          <button type="submit" className="primary" style={{ width: '100%' }}>
+          <button type="submit" className="primary">
             会議に参加する
           </button>
         </form>

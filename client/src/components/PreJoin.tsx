@@ -324,76 +324,38 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
 
   return (
     <div className="home-container">
-      <div className="glass-panel" style={{ maxWidth: '600px' }}>
-        <h2 style={{ marginBottom: '8px' }}>会議に参加する準備</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+      <div className="glass-panel prejoin-panel">
+        <h2 className="prejoin-title">会議に参加する準備</h2>
+        <p className="prejoin-desc">
           {userName} として {roomId} に参加します
         </p>
         
         {/* ビデオプレビュー */}
-        <div style={{ 
-          position: 'relative', 
-          width: '100%', 
-          paddingTop: '56.25%', 
-          backgroundColor: 'var(--bg-secondary)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px'
-        }}>
+        <div className="video-preview-container">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transform: 'scaleX(-1)',
-              display: (localStream && isVideoEnabled) ? 'block' : 'none'
-            }}
+            className="video-preview"
+            data-visible={!!(localStream && isVideoEnabled)}
           />
           {!localStream && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              color: 'var(--text-muted)'
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid rgba(255,255,255,0.1)',
-                borderTop: '3px solid var(--accent)',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 12px'
-              }} />
+            <div className="video-preview-overlay">
+              <div className="video-preview-spinner" />
               <div>カメラを準備しています...</div>
             </div>
           )}
           {localStream && !isVideoEnabled && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              color: 'var(--text-muted)'
-            }}>
-              <VideoOff size={48} style={{ marginBottom: '8px' }} />
+            <div className="video-preview-overlay">
+              <VideoOff size={48} className="video-preview-icon" />
               <div>カメラがオフです</div>
             </div>
           )}
         </div>
         
         {/* コントロール */}
-        <div className="controls-bar" style={{ marginBottom: '24px' }}>
+        <div className="controls-bar prejoin-controls">
           {/* マイク */}
           <div className="control-group">
             <button 
@@ -504,25 +466,16 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, onJoin, onCancel })
         </div>
         
         {/* ボタン */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="prejoin-actions">
           <button 
             onClick={onCancel}
-            style={{ 
-              flex: 1,
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: 'transparent',
-              color: 'var(--text)',
-              cursor: 'pointer'
-            }}
+            className="prejoin-cancel"
           >
             キャンセル
           </button>
           <button 
             onClick={handleJoin}
-            className="primary"
-            style={{ flex: 2 }}
+            className="primary prejoin-join"
           >
             参加する
           </button>

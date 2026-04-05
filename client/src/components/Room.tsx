@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'simple-peer';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff, Menu, X } from 'lucide-react';
 import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
 
@@ -99,7 +99,7 @@ const VideoPlayer = ({
         autoPlay 
         playsInline 
         muted={isLocal} 
-        style={{ transform: isLocal ? 'scaleX(-1)' : 'none' }}
+        className={isLocal ? 'video-mirror' : ''}
       />
       
       <div className="video-label">{label}</div>
@@ -151,6 +151,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
   const [screenSharingUserId, setScreenSharingUserId] = useState<string | null>(null);
   const [screenSharingUserName, setScreenSharingUserName] = useState<string | null>(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const isScreenShareSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   const socketRef = useRef<Socket | null>(null);
@@ -963,7 +964,7 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
     <div className="room-container">
       <div className="room-header">
         <h2>Room: {roomId}</h2>
-        <div style={{ color: 'var(--text-muted)' }}>
+        <div className="room-user-count">
           {peers.length + 1} users connected
         </div>
       </div>
@@ -1013,197 +1014,295 @@ const Room: React.FC<RoomProps> = ({ roomId, userName, initialSettings, onLeave 
       </div>
 
       <div className="controls-bar">
-        <div className="control-group">
-          <div className="control-btn-wrapper">
-            {localStream && (
-              <div 
-                className="visualizer-underlay"
-                style={{
-                  opacity: isAudioEnabled ? 1 : 0,
-                  transition: 'opacity 0.2s ease',
-                  pointerEvents: 'none'
-                }}
+        {/* デスクトップ用コントロール（スマホでは非表示） */}
+        <div className="desktop-controls">
+          <div className="control-group">
+            <div className="control-btn-wrapper">
+              {localStream && (
+                <div 
+                  className="visualizer-underlay"
+                  data-active={isAudioEnabled}
+                >
+                  <AudioVisualizer stream={localStream} isLocal />
+                </div>
+              )}
+              <button 
+                className={`icon ${!isAudioEnabled ? 'active' : ''}`} 
+                onClick={toggleAudio}
+                title="Toggle Mic"
               >
-                <AudioVisualizer stream={localStream} isLocal />
-              </div>
-            )}
-            <button 
-              className={`icon ${!isAudioEnabled ? 'active' : ''}`} 
-              onClick={toggleAudio}
-              title="Toggle Mic"
-              style={{ zIndex: 1 }}
-            >
-              {isAudioEnabled ? <Mic /> : <MicOff />}
-            </button>
-          </div>
-          
-          {/* マイク選択ドロップダウン用ボタン */}
-          <div>
-            <button 
-              className="icon-small" 
-              onClick={() => setShowAudioMenu(!showAudioMenu)}
-              title="Select Microphone"
-            >
-              <ChevronUp size={16} />
-            </button>
+                {isAudioEnabled ? <Mic /> : <MicOff />}
+              </button>
+            </div>
             
-            {showAudioMenu && (
-              <div className="device-menu">
-                <div className="device-menu-title">Select Microphone</div>
-                {audioDevices.length > 0 ? (
-                  audioDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeAudioDevice(device.deviceId)}
-                    >
-                      {device.label || `Microphone ${idx + 1}`}
-                    </div>
-                  ))
-                ) : (
-                  <div className="device-menu-item" style={{ opacity: 0.5 }}>No devices found</div>
-                )}
-              </div>
-            )}
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowAudioMenu(!showAudioMenu)}
+                title="Select Microphone"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showAudioMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">Select Microphone</div>
+                  {audioDevices.length > 0 ? (
+                    audioDevices.map((device, idx) => (
+                      <div 
+                        key={device.deviceId || String(idx)} 
+                        className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
+                        onClick={() => changeAudioDevice(device.deviceId)}
+                      >
+                        {device.label || `Microphone ${idx + 1}`}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="device-menu-item empty">No devices found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="control-group">
+            <div className="control-btn-wrapper">
+              <button 
+                className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
+                onClick={toggleVideo}
+                title="Toggle Video"
+              >
+                {isVideoEnabled ? <Video /> : <VideoOff />}
+              </button>
+            </div>
+            
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowVideoMenu(!showVideoMenu)}
+                title="Select Camera"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showVideoMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">Select Camera</div>
+                  {videoDevices.length > 0 ? (
+                    videoDevices.map((device, idx) => (
+                      <div 
+                        key={device.deviceId || String(idx)} 
+                        className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
+                        onClick={() => changeVideoDevice(device.deviceId)}
+                      >
+                        {device.label || `Camera ${idx + 1}`}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="device-menu-item empty">No devices found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isScreenShareSupported && (
+            <button
+              className={`icon ${isScreenSharing ? 'active' : ''}`}
+              onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+              disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
+              data-disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
+              title={
+                screenSharingUserId && screenSharingUserId !== socketRef.current?.id
+                  ? '他の参加者が画面共有中です'
+                  : isScreenSharing
+                    ? '共有を停止'
+                    : '画面を共有'
+              }
+            >
+              {isScreenSharing ? <MonitorOff /> : <Monitor />}
+            </button>
+          )}
+
+          <div className="control-group">
+            <div className="control-btn-wrapper">
+              <button 
+                className={`icon ${!isSpeakerEnabled ? 'active' : ''}`} 
+                onClick={toggleSpeaker}
+                title="Toggle Speaker"
+              >
+                {isSpeakerEnabled ? <Volume2 /> : <VolumeX />}
+              </button>
+            </div>
+            
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowOutputMenu(!showOutputMenu)}
+                title="Select Speaker"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showOutputMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">Select Speaker</div>
+                  {audioOutputDevices.length > 0 ? (
+                    audioOutputDevices.map((device, idx) => (
+                      <div 
+                        key={device.deviceId || String(idx)} 
+                        className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
+                        onClick={() => changeOutputDevice(device.deviceId)}
+                      >
+                        {device.label || `Speaker ${idx + 1}`}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="device-menu-item empty">No devices found</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="control-group">
-          <div className="control-btn-wrapper">
-            <button 
-              className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
-              onClick={toggleVideo}
-              title="Toggle Video"
-              style={{ zIndex: 1 }}
-            >
-              {isVideoEnabled ? <Video /> : <VideoOff />}
-            </button>
-          </div>
-          
-          {/* カメラ選択ドロップダウン */}
-          <div>
-            <button 
-              className="icon-small" 
-              onClick={() => setShowVideoMenu(!showVideoMenu)}
-              title="Select Camera"
-            >
-              <ChevronUp size={16} />
-            </button>
-            
-            {showVideoMenu && (
-              <div className="device-menu">
-                <div className="device-menu-title">Select Camera</div>
-                {videoDevices.length > 0 ? (
-                  videoDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeVideoDevice(device.deviceId)}
-                    >
-                      {device.label || `Camera ${idx + 1}`}
-                    </div>
-                  ))
-                ) : (
-                  <div className="device-menu-item" style={{ opacity: 0.5 }}>No devices found</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 画面共有ボタン */}
-        {isScreenShareSupported && (
-          <button
-            className={`icon ${isScreenSharing ? 'active' : ''}`}
-            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-            disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
-            title={
-              screenSharingUserId && screenSharingUserId !== socketRef.current?.id
-                ? '他の参加者が画面共有中です'
-                : isScreenSharing
-                  ? '共有を停止'
-                  : '画面を共有'
-            }
-            style={{
-              opacity: screenSharingUserId && screenSharingUserId !== socketRef.current?.id ? 0.5 : 1,
-              cursor: screenSharingUserId && screenSharingUserId !== socketRef.current?.id ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isScreenSharing ? <MonitorOff /> : <Monitor />}
-          </button>
-        )}
-
-        {/* スピーカー選択 */}
-        <div className="control-group">
-          <div className="control-btn-wrapper">
-            <button 
-              className={`icon ${!isSpeakerEnabled ? 'active' : ''}`} 
-              onClick={toggleSpeaker}
-              title="Toggle Speaker"
-              style={{ zIndex: 1 }}
-            >
-              {isSpeakerEnabled ? <Volume2 /> : <VolumeX />}
-            </button>
-          </div>
-          
-          {/* スピーカー選択ドロップダウン */}
-          <div>
-            <button 
-              className="icon-small" 
-              onClick={() => setShowOutputMenu(!showOutputMenu)}
-              title="Select Speaker"
-            >
-              <ChevronUp size={16} />
-            </button>
-            
-            {showOutputMenu && (
-              <div className="device-menu">
-                <div className="device-menu-title">Select Speaker</div>
-                {audioOutputDevices.length > 0 ? (
-                  audioOutputDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeOutputDevice(device.deviceId)}
-                    >
-                      {device.label || `Speaker ${idx + 1}`}
-                    </div>
-                  ))
-                ) : (
-                  <div className="device-menu-item" style={{ opacity: 0.5 }}>No devices found</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* モバイル用ハンバーガーボタン（スマホでのみ表示） */}
+        <button 
+          className="icon mobile-menu-btn"
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          title="メニュー"
+        >
+          {showMobileMenu ? <X /> : <Menu />}
+        </button>
 
         <button 
-          className="icon active" 
+          className="icon active leave-btn" 
           onClick={() => setShowLeaveConfirm(true)}
-          style={{ width: 'auto', padding: '0 24px', borderRadius: '24px' }}
           title="Leave Room"
         >
           <PhoneOff />
-          <span style={{ fontSize: '14px', fontWeight: 600 }}>退出する</span>
+          <span className="leave-btn-text">退出する</span>
         </button>
       </div>
+
+      {/* モバイルメニューパネル */}
+      {showMobileMenu && (
+        <div className="mobile-menu-overlay" onClick={() => setShowMobileMenu(false)}>
+          <div className="mobile-menu-panel" onClick={e => e.stopPropagation()}>
+            {/* マイク */}
+            <div className="mobile-menu-item">
+              <button 
+                className={`icon ${!isAudioEnabled ? 'active' : ''}`} 
+                onClick={toggleAudio}
+              >
+                {isAudioEnabled ? <Mic /> : <MicOff />}
+              </button>
+              <span className="mobile-menu-label">マイク</span>
+              {audioDevices.length > 1 && (
+                <select 
+                  className="mobile-device-select"
+                  value={selectedAudioDeviceId}
+                  onChange={e => changeAudioDevice(e.target.value)}
+                >
+                  {audioDevices.map((device, idx) => (
+                    <option key={device.deviceId || String(idx)} value={device.deviceId}>
+                      {device.label || `Microphone ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* カメラ */}
+            <div className="mobile-menu-item">
+              <button 
+                className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
+                onClick={toggleVideo}
+              >
+                {isVideoEnabled ? <Video /> : <VideoOff />}
+              </button>
+              <span className="mobile-menu-label">カメラ</span>
+              {videoDevices.length > 1 && (
+                <select 
+                  className="mobile-device-select"
+                  value={selectedVideoDeviceId}
+                  onChange={e => changeVideoDevice(e.target.value)}
+                >
+                  {videoDevices.map((device, idx) => (
+                    <option key={device.deviceId || String(idx)} value={device.deviceId}>
+                      {device.label || `Camera ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* スピーカー */}
+            <div className="mobile-menu-item">
+              <button 
+                className={`icon ${!isSpeakerEnabled ? 'active' : ''}`} 
+                onClick={toggleSpeaker}
+              >
+                {isSpeakerEnabled ? <Volume2 /> : <VolumeX />}
+              </button>
+              <span className="mobile-menu-label">スピーカー</span>
+              {audioOutputDevices.length > 1 && (
+                <select 
+                  className="mobile-device-select"
+                  value={selectedOutputDeviceId}
+                  onChange={e => changeOutputDevice(e.target.value)}
+                >
+                  {audioOutputDevices.map((device, idx) => (
+                    <option key={device.deviceId || String(idx)} value={device.deviceId}>
+                      {device.label || `Speaker ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* 画面共有 */}
+            {isScreenShareSupported && (
+              <div className="mobile-menu-item">
+                <button
+                  className={`icon ${isScreenSharing ? 'active' : ''}`}
+                  onClick={() => {
+                    if (isScreenSharing) {
+                      stopScreenShare();
+                    } else {
+                      startScreenShare();
+                    }
+                    setShowMobileMenu(false);
+                  }}
+                  disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
+                  data-disabled={!!(screenSharingUserId && screenSharingUserId !== socketRef.current?.id)}
+                >
+                  {isScreenSharing ? <MonitorOff /> : <Monitor />}
+                </button>
+                <span className="mobile-menu-label">
+                  {isScreenSharing ? '共有を停止' : '画面共有'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 退出確認モーダル */}
       {showLeaveConfirm && (
         <div className="leave-modal-overlay" onClick={() => setShowLeaveConfirm(false)}>
           <div className="leave-modal" onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>ルームを退出しますか？</p>
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>通話から切断されます。</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <p className="leave-modal-title">ルームを退出しますか？</p>
+            <p className="leave-modal-desc">通話から切断されます。</p>
+            <div className="leave-modal-actions">
               <button
-                style={{ background: 'rgba(255,255,255,0.1)', color: 'white', padding: '10px 24px', borderRadius: '8px' }}
+                className="leave-modal-cancel"
                 onClick={() => setShowLeaveConfirm(false)}
               >
                 キャンセル
               </button>
               <button
-                className="danger"
-                style={{ padding: '10px 24px', borderRadius: '8px' }}
+                className="danger leave-modal-confirm"
                 onClick={onLeave}
               >
                 退出する

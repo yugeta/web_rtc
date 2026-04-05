@@ -167,11 +167,15 @@ input:focus {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .room-header h2 {
   font-size: 1.25rem;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .video-grid {
@@ -272,6 +276,8 @@ input:focus {
   gap: 16px;
   background: linear-gradient(to top, rgba(15,23,42,1) 0%, rgba(15,23,42,0) 100%);
   z-index: 10;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .control-group {
@@ -435,6 +441,22 @@ input:focus {
   min-width: 160px;
 }
 
+/* 退出ボタン */
+button.icon.leave-btn {
+  width: auto;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 24px;
+  white-space: nowrap;
+  gap: 6px;
+}
+
+.leave-btn-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 /* 退出確認モーダル */
 .leave-modal-overlay {
   position: fixed;
@@ -461,4 +483,405 @@ input:focus {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ========== VideoPlayer ========== */
+.video-mirror {
+  transform: scaleX(-1);
+}
+
+/* ========== Room Header ========== */
+.room-user-count {
+  color: var(--text-muted);
+}
+
+/* ========== Visualizer Underlay 状態 ========== */
+.visualizer-underlay[data-active="false"] {
+  opacity: 0;
+}
+
+.visualizer-underlay[data-active="true"] {
+  opacity: 1;
+}
+
+/* ========== デバイスメニュー空状態 ========== */
+.device-menu-item.empty {
+  opacity: 0.5;
+}
+
+/* ========== 画面共有ボタン無効状態 ========== */
+button.icon[data-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 退出確認モーダル ========== */
+.leave-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.leave-modal-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.leave-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.leave-modal-cancel {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+}
+
+.leave-modal-confirm {
+  padding: 10px 24px;
+  border-radius: 8px;
+}
+
+/* ========== App.tsx ホーム画面 ========== */
+.home-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.home-icon-bg {
+  background: var(--accent);
+  padding: 16px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.join-form .primary {
+  width: 100%;
+}
+
+/* ========== PreJoin ========== */
+.glass-panel.prejoin-panel {
+  max-width: 600px;
+}
+
+.prejoin-title {
+  margin-bottom: 8px;
+}
+
+.prejoin-desc {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.video-preview-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background-color: var(--panel-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.video-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.video-preview[data-visible="false"] {
+  display: none;
+}
+
+.video-preview-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.video-preview-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+.video-preview-icon {
+  margin-bottom: 8px;
+}
+
+.prejoin-controls {
+  margin-bottom: 24px;
+}
+
+.prejoin-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.prejoin-cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.prejoin-join {
+  flex: 2;
+}
+
+/* ========== レスポンシブ対応 ========== */
+
+/* デスクトップ: ハンバーガーボタンを非表示 */
+.mobile-menu-btn {
+  display: none;
+}
+
+.desktop-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* モバイルメニュー */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  backdrop-filter: blur(4px);
+}
+
+.mobile-menu-panel {
+  position: fixed;
+  bottom: 80px;
+  left: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 91;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-menu-label {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.mobile-device-select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.mobile-device-select:focus {
+  border-color: var(--accent);
+}
+
+/* タブレット */
+@media (max-width: 768px) {
+  .room-header {
+    padding: 12px 16px;
+  }
+
+  .room-header h2 {
+    font-size: 1rem;
+  }
+
+  .video-grid {
+    gap: 8px;
+    padding: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .video-wrapper {
+    border-radius: 12px;
+  }
+
+  .controls-bar {
+    padding: 16px 12px;
+    gap: 10px;
+  }
+
+  .device-menu {
+    min-width: 200px;
+    max-width: 280px;
+  }
+
+  .glass-panel {
+    padding: 24px;
+    margin: 12px;
+  }
+}
+
+/* スマートフォン */
+@media (max-width: 480px) {
+  .room-container {
+    height: 100dvh;
+  }
+
+  .room-header {
+    padding: 10px 12px;
+  }
+
+  .room-header h2 {
+    font-size: 0.875rem;
+  }
+
+  .video-grid {
+    gap: 4px;
+    padding: 4px;
+    grid-template-columns: 1fr;
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  .video-wrapper {
+    border-radius: 8px;
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .video-wrapper video {
+    object-fit: cover;
+  }
+
+  .video-label {
+    font-size: 12px;
+    padding: 3px 8px;
+    top: 6px;
+    left: 6px;
+  }
+
+  .video-status-icons {
+    top: 6px;
+    right: 6px;
+    gap: 4px;
+  }
+
+  .status-icon {
+    padding: 4px;
+  }
+
+  /* デスクトップコントロールを非表示、ハンバーガーを表示 */
+  .desktop-controls {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .controls-bar {
+    padding: 12px 16px;
+    gap: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  button.icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .leave-btn {
+    width: 42px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .leave-btn-text {
+    display: none;
+  }
+
+  .leave-modal {
+    padding: 24px;
+    width: 95%;
+  }
+
+  .glass-panel {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .glass-panel h1 {
+    font-size: 1.5rem;
+  }
+
+  .screen-share-wrapper {
+    max-height: 40vh;
+    border-radius: 10px;
+  }
+
+  .video-grid.with-screen-share > .video-wrapper {
+    max-width: 120px;
+    min-width: 100px;
+  }
+}
+
+/* 横向きスマートフォン */
+@media (max-height: 500px) and (orientation: landscape) {
+  .room-header {
+    padding: 6px 12px;
+  }
+
+  .video-grid {
+    gap: 6px;
+    padding: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .controls-bar {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  button.icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .icon-small {
+    width: 26px;
+    height: 26px;
+  }
 }
