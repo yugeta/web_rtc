@@ -36,3 +36,44 @@ sudo systemctl restart web-rtc-signaling
 ```
 
 詳細な手順（初回セットアップ、Nginx設定、SSL、systemd等）は [deployment.md](./deployment.md) を参照してください。
+
+---
+
+## サーバー作業ログ
+
+### 2026-04-05: Google OAuth ログイン機能追加
+
+Google OAuth 認証、JWT 認証、Room 管理 API、Dashboard 画面、react-router-dom によるルーティングを追加。
+
+#### サーバー側の作業
+
+```bash
+ssh ubuntu@<VPSのIPアドレス>
+cd /var/www/web_rtc
+git pull origin main
+
+# 依存パッケージ更新（google-auth-library, jsonwebtoken, uuid, dotenv を追加）
+cd server
+npm install
+
+# 環境変数の設定（初回のみ）
+cat >> .env << 'EOF'
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+JWT_SECRET=<openssl rand -base64 32 で生成した値>
+EOF
+
+# ビルド・再起動
+npm run build
+pm2 restart webrtc-server
+# または: sudo systemctl restart web-rtc-signaling
+```
+
+#### クライアント側の作業
+
+GitHub Actions 自動デプロイの場合:
+- リポジトリの Settings → Secrets and variables → Actions に `VITE_GOOGLE_CLIENT_ID` を追加
+- workflow（`.github/workflows/deploy.yml`）で `VITE_GOOGLE_CLIENT_ID` を環境変数として渡すよう修正
+
+手動ビルドの場合:
+- `client/.env.production` に `VITE_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com` を設定
+- `npm run build` → VPS に転送
