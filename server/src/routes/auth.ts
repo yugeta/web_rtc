@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
+import { upsert } from '../userStore';
+import { appendLoginLog } from '../loginLogger';
 
 const router = Router();
 
@@ -42,6 +44,10 @@ router.post('/google', async (req: Request, res: Response) => {
       expiresIn: '7d',
       algorithm: 'HS256',
     });
+
+    // ユーザー登録/更新 + ログインログ記録
+    upsert(user);
+    appendLoginLog(user);
 
     res.json({ token, user });
   } catch {
