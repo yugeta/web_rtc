@@ -27,4 +27,5 @@ services:
       - PORT=3001
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USER_IDS=${ADMIN_USER_IDS}
     command: npm run dev

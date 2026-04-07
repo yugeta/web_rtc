@@ -101,6 +101,7 @@ npm run dev
 | `PORT` | `server/.env` | △ | サーバーのリッスンポート（デフォルト: `3001`） |
 | `GOOGLE_CLIENT_ID` | `server/.env` | ○ | Google OAuth Client ID（トークン検証用） |
 | `JWT_SECRET` | `server/.env` | ○ | JWT 署名用シークレット |
+| `ADMIN_USER_IDS` | `server/.env` | △ | 管理者の Google ユーザー ID（カンマ区切りで複数指定可） |
 
 ### Google OAuth Client ID の取得
 
@@ -123,6 +124,7 @@ npm run dev
 cat > .env << 'EOF'
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 JWT_SECRET=your-random-secret-string-here
+ADMIN_USER_IDS=your-google-sub-id
 EOF
 
 # 2. client/.env
@@ -136,10 +138,11 @@ cat > server/.env << 'EOF'
 PORT=3001
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 JWT_SECRET=your-random-secret-string-here
+ADMIN_USER_IDS=your-google-sub-id
 EOF
 ```
 
-`docker-compose.yml` は `${GOOGLE_CLIENT_ID}` / `${JWT_SECRET}` をルートの `.env` から読み込んでサーバーコンテナに渡します。
+`docker-compose.yml` は `${GOOGLE_CLIENT_ID}` / `${JWT_SECRET}` / `${ADMIN_USER_IDS}` をルートの `.env` から読み込んでサーバーコンテナに渡します。
 
 #### 方法2: Node.js 直接起動の場合
 
@@ -151,6 +154,7 @@ cat > server/.env << 'EOF'
 PORT=3001
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 JWT_SECRET=your-random-secret-string-here
+ADMIN_USER_IDS=your-google-sub-id
 EOF
 
 # 2. client/.env
@@ -168,6 +172,14 @@ EOF
 openssl rand -base64 32
 ```
 
+### ADMIN_USER_IDS の確認方法
+
+管理者にしたいユーザーの Google ユーザー ID（`sub`）を指定します。初回ログイン後に `server/data/users.json` を確認すると `sub` フィールドに記載されています。複数人指定する場合はカンマ区切り:
+
+```
+ADMIN_USER_IDS=sub1,sub2
+```
+
 ### 本番環境の .env
 
 #### VPS（サーバー側）
@@ -178,6 +190,7 @@ PORT=3001
 NODE_ENV=production
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 JWT_SECRET=your-production-secret
+ADMIN_USER_IDS=your-google-sub-id
 ```
 
 #### GitHub Pages（クライアント側）

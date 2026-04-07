@@ -7,6 +7,7 @@ import { ensureDirectories, appendMessage, getHistory, archiveLog } from './chat
 import { startScheduler } from './archiveScanner';
 import authRouter from './routes/auth';
 import roomsRouter from './routes/rooms';
+import adminRouter from './routes/admin';
 import type { JwtUserPayload } from './middleware/auth';
 
 // 必須環境変数のバリデーション
@@ -34,6 +35,7 @@ app.use(express.json());
 // 認証ルートと Room ルートをマウント
 app.use('/api/auth', authRouter);
 app.use('/api/rooms', roomsRouter);
+app.use('/api/admin', adminRouter);
 
 const server = createServer(app);
 const io = new Server(server, {
