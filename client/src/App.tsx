@@ -6,6 +6,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminRooms from './pages/admin/AdminRooms';
+import AdminMonitor from './pages/admin/AdminMonitor';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import AppHeader from './components/AppHeader';
@@ -37,6 +38,7 @@ function App() {
           <Route index element={<AdminUsers />} />
           <Route path="logs" element={<AdminLogs />} />
           <Route path="rooms" element={<AdminRooms />} />
+          <Route path="monitor" element={<AdminMonitor />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

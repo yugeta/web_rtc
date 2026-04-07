@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Users, FileText, Video } from 'lucide-react';
+import { Users, FileText, Video, Activity } from 'lucide-react';
 import './Admin.css';
 
 export default function AdminLayout() {
@@ -14,6 +14,9 @@ export default function AdminLayout() {
         </NavLink>
         <NavLink to="/admin/rooms" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
           <Video size={16} /> 全 Room
+        </NavLink>
+        <NavLink to="/admin/monitor" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+          <Activity size={16} /> モニター
         </NavLink>
       </nav>
       <main className="admin-content">

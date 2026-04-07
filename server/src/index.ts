@@ -8,7 +8,11 @@ import { startScheduler } from './archiveScanner';
 import authRouter from './routes/auth';
 import roomsRouter from './routes/rooms';
 import adminRouter from './routes/admin';
+import { authMiddleware } from './middleware/auth';
+import { adminMiddleware } from './middleware/admin';
 import type { JwtUserPayload } from './middleware/auth';
+import * as userStore from './userStore';
+import * as roomStore from './roomStore';
 
 // 必須環境変数のバリデーション
 const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'JWT_SECRET'] as const;
@@ -78,6 +82,20 @@ const roomUsers: Record<string, Array<{ socketId: string, userName: string }>> =
 const socketRoomMap: Record<string, { roomId: string, userName: string }> = {};
 // RoomId -> 開始時刻（最初のユーザーが入室した時刻）
 const roomStartedAt: Record<string, string> = {};
+
+// ヘルスチェック API（admin のみ）
+app.get('/api/admin/health', authMiddleware, adminMiddleware, (_req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    uptime: Math.floor(process.uptime()),
+    memoryUsage: { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal },
+    activeRooms: Object.keys(roomUsers).length,
+    activeConnections: io.engine.clientsCount,
+    registeredUsers: userStore.load().length,
+    totalRooms: roomStore.load().length,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 io.on('connection', (socket: Socket) => {
   console.log(`User connected: ${socket.id}`);
