@@ -1004,9 +1004,7 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
 
   return (
     <div className="room-container">
-
-      <div className="room-content">
-        <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>
+      <div className={`video-grid ${screenSharingUserId ? 'with-screen-share' : ''}`} data-count={peers.length + 1}>
           {/* 画面共有表示 */}
           {screenSharingUserId && (() => {
             // 自分が共有中の場合はローカルのscreenStream、他者の場合はPeerのscreenStream
@@ -1048,15 +1046,14 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
               isVideoEnabled={peer.isVideoEnabled ?? true}
             />
           ))}
-        </div>
-        <ChatPanel
-          socket={socketRef.current}
-          userName={userName}
-          isOpen={isChatOpen}
-          onUnreadCountChange={setUnreadCount}
-          onClose={() => setIsChatOpen(false)}
-        />
       </div>
+      <ChatPanel
+        socket={socketRef.current}
+        userName={userName}
+        isOpen={isChatOpen}
+        onUnreadCountChange={setUnreadCount}
+        onClose={() => setIsChatOpen(false)}
+      />
 
       <div className="controls-bar">
         {/* デスクトップ用コントロール（スマホでは非表示） */}
