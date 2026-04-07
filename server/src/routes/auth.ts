@@ -33,11 +33,14 @@ router.post('/google', async (req: Request, res: Response) => {
       return;
     }
 
+    const ADMIN_IDS = (process.env['ADMIN_USER_IDS'] || '').split(',').map(s => s.trim()).filter(Boolean);
+
     const user = {
       sub: payload.sub,
       name: payload.name ?? '',
       email: payload.email ?? '',
       picture: payload.picture ?? '',
+      isAdmin: ADMIN_IDS.includes(payload.sub),
     };
 
     const token = jwt.sign(user, process.env['JWT_SECRET']!, {

@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   email: string;
   picture: string;
+  isAdmin: boolean;
 }
 
 export interface AuthContextType {
@@ -35,6 +36,7 @@ function decodeJwtPayload(token: string): AuthUser | null {
       name: payload.name,
       email: payload.email,
       picture: payload.picture,
+      isAdmin: payload.isAdmin === true,
     };
   } catch {
     return null;

@@ -48,8 +48,13 @@ export default function AppHeader() {
               <div className="app-header-menu">
                 <div className="app-header-menu-name">{user.name}</div>
                 <button onClick={() => { setMenuOpen(false); navigate('/dashboard'); }} className="app-header-menu-item">
-                  <Settings size={14} /> 管理画面
+                  <Settings size={14} /> Room 管理
                 </button>
+                {user.isAdmin && (
+                  <button onClick={() => { setMenuOpen(false); navigate('/admin'); }} className="app-header-menu-item">
+                    <Settings size={14} /> 管理者画面
+                  </button>
+                )}
                 <button onClick={handleLogout} className="app-header-menu-item">
                   <LogOut size={14} /> ログアウト
                 </button>
