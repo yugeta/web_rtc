@@ -30,6 +30,7 @@ jobs:
         env:
           VITE_SERVER_URL: https://sock.mynt.work
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist
