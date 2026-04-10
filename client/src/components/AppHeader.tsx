@@ -20,7 +20,7 @@ export default function AppHeader() {
     return () => document.removeEventListener('mousedown', handle);
   }, [menuOpen]);
 
-  const handleLogout = () => { setMenuOpen(false); logout(); navigate('/'); };
+  const handleLogout = async () => { setMenuOpen(false); await logout(); navigate('/'); };
 
   return (
     <header className="app-header">

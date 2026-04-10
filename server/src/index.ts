@@ -8,11 +8,13 @@ import { startScheduler } from './archiveScanner';
 import authRouter from './routes/auth';
 import roomsRouter from './routes/rooms';
 import adminRouter from './routes/admin';
+import pushRouter from './routes/push';
 import { authMiddleware } from './middleware/auth';
 import { adminMiddleware } from './middleware/admin';
 import type { JwtUserPayload } from './middleware/auth';
 import * as userStore from './userStore';
 import * as roomStore from './roomStore';
+import { setUserVisibility, setRoomParticipants, buildChatPayload, buildJoinPayload, sendToRoom } from './pushService';
 
 // 必須環境変数のバリデーション
 const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'JWT_SECRET'] as const;
@@ -22,6 +24,16 @@ for (const envVar of requiredEnvVars) {
     process.exit(1);
   }
 }
+
+// VAPID 鍵の存在チェック（プッシュ通知用）
+const vapidEnvVars = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'] as const;
+const missingVapidVars = vapidEnvVars.filter((v) => !process.env[v]);
+if (missingVapidVars.length > 0) {
+  console.warn(
+    `Warning: Push notification disabled. Missing VAPID env vars: ${missingVapidVars.join(', ')}`
+  );
+}
+export const pushEnabled = missingVapidVars.length === 0;
 
 const app = express();
 app.use(cors({
@@ -40,6 +52,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/push', pushRouter);
 
 const server = createServer(app);
 const io = new Server(server, {
@@ -83,6 +96,14 @@ const socketRoomMap: Record<string, { roomId: string, userName: string }> = {};
 // RoomId -> 開始時刻（最初のユーザーが入室した時刻）
 const roomStartedAt: Record<string, string> = {};
 
+// Visibility 状態管理: key = `${userSub}:${roomId}`, value = 'foreground' | 'background'
+const userVisibility = new Map<string, 'foreground' | 'background'>();
+setUserVisibility(userVisibility);
+
+// ルーム参加者管理: roomId -> Set<userSub>
+const roomParticipants = new Map<string, Set<string>>();
+setRoomParticipants(roomParticipants);
+
 // ヘルスチェック API（admin のみ）
 app.get('/api/admin/health', authMiddleware, adminMiddleware, (_req, res) => {
   const mem = process.memoryUsage();
@@ -124,6 +145,17 @@ io.on('connection', (socket: Socket) => {
     }
     socketRoomMap[socket.id] = { roomId, userName };
 
+    // roomParticipants を更新（認証済みユーザーのみ）
+    const user = socket.data.user;
+    if (user?.sub) {
+      if (!roomParticipants.has(roomId)) {
+        roomParticipants.set(roomId, new Set());
+      }
+      roomParticipants.get(roomId)!.add(user.sub);
+      // デフォルトで foreground 状態に設定
+      userVisibility.set(`${user.sub}:${roomId}`, 'foreground');
+    }
+
     console.log(`User ${socket.id} (${userName}) joined room ${roomId}`);
 
     // 通知: 新しいユーザーが入室した
@@ -132,6 +164,14 @@ io.on('connection', (socket: Socket) => {
       userId: socket.id, 
       userName
     });
+
+    // Push notification to background participants (fire and forget)
+    const joinerSub = socket.data.user?.sub;
+    const room = roomStore.findById(roomId);
+    if (room) {
+      const joinPayload = buildJoinPayload(roomId, room.name, userName);
+      sendToRoom(roomId, joinPayload, joinerSub).catch(() => {});
+    }
 
     // 新規参加者へ: すでに部屋にいる全ユーザーのリストを返す（自分のIDは除く）
     const usersInThisRoom = roomUsers[roomId]
@@ -176,6 +216,26 @@ io.on('connection', (socket: Socket) => {
 
     appendMessage(userInfo.roomId, chatMessage);
     io.to(userInfo.roomId).emit('chat-message', chatMessage);
+
+    // Push notification to background participants (fire and forget)
+    const senderSub = socket.data.user?.sub;
+    const room = roomStore.findById(userInfo.roomId);
+    if (room) {
+      const pushPayload = buildChatPayload(userInfo.roomId, room.name, userInfo.userName, payload.message);
+      sendToRoom(userInfo.roomId, pushPayload, senderSub).catch(() => {});
+    }
+  });
+
+  // Visibility 状態管理
+  socket.on('visibility-state', (payload: { state: 'foreground' | 'background', roomId: string }) => {
+    const user = socket.data.user;
+    if (!user?.sub) return;
+
+    const { state, roomId } = payload;
+    if (state !== 'foreground' && state !== 'background') return;
+
+    const visKey = `${user.sub}:${roomId}`;
+    userVisibility.set(visKey, state);
   });
 
   // Disconnect
@@ -197,6 +257,19 @@ io.on('connection', (socket: Socket) => {
         
         // 部屋の残りのユーザーに退出を通知
         socket.to(roomId).emit('user-disconnected', socket.id);
+      }
+
+      // Visibility 状態と roomParticipants のクリーンアップ
+      const user = socket.data.user;
+      if (user?.sub) {
+        userVisibility.delete(`${user.sub}:${roomId}`);
+        const participants = roomParticipants.get(roomId);
+        if (participants) {
+          participants.delete(user.sub);
+          if (participants.size === 0) {
+            roomParticipants.delete(roomId);
+          }
+        }
       }
     }
     

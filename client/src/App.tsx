@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import AppHeader from './components/AppHeader';
 import { HeaderProvider } from './contexts/HeaderContext';
+import ReloadPrompt from './components/ReloadPrompt';
 
 function NotFound() {
   return (
@@ -42,6 +43,7 @@ function App() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <ReloadPrompt />
     </HeaderProvider>
   );
 }

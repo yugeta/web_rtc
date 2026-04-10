@@ -6,15 +6,15 @@
 
 ## タスク
 
-- [ ] 1. サーバー側の基盤構築
-  - [ ] 1.1 環境変数と VAPID 鍵の設定
+- [x] 1. サーバー側の基盤構築
+  - [x] 1.1 環境変数と VAPID 鍵の設定
     - `server/.env` に `VAPID_PUBLIC_KEY`、`VAPID_PRIVATE_KEY`、`VAPID_SUBJECT` を追加
     - `client/.env` に `VITE_VAPID_PUBLIC_KEY` を追加
     - `server/src/index.ts` で VAPID 鍵の存在チェックと警告ログ出力を実装
     - `web-push` パッケージを `server` の dependencies に追加
     - _Requirements: 4.1, 4.2, 4.3_
 
-  - [ ] 1.2 SubscriptionStore の実装 (`server/src/subscriptionStore.ts`)
+  - [x] 1.2 SubscriptionStore の実装 (`server/src/subscriptionStore.ts`)
     - `SubscriptionRecord` インターフェース定義（userSub, deviceId, subscription, createdAt）
     - `save`, `findByUser`, `remove`, `removeByUser`, `removeByEndpoint` メソッドを実装
     - JSON ファイル (`server/data/subscriptions.json`) への永続化
@@ -45,11 +45,11 @@
     - テストファイル: `server/src/__tests__/subscriptionStore.test.ts`
     - **Validates: Requirements 9.2**
 
-- [ ] 2. チェックポイント - SubscriptionStore のテスト確認
+- [x] 2. チェックポイント - SubscriptionStore のテスト確認
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. サーバー側の通知サービスと API
-  - [ ] 3.1 PushService の実装 (`server/src/pushService.ts`)
+- [x] 3. サーバー側の通知サービスと API
+  - [x] 3.1 PushService の実装 (`server/src/pushService.ts`)
     - `web-push` ライブラリの初期化と VAPID 設定
     - `sendNotification(userSub, payload)` メソッド: 指定ユーザーの全デバイスに通知送信
     - `sendToRoom(roomId, payload, excludeUserSub)` メソッド: ルーム参加者のうちバックグラウンド状態のユーザーに通知送信
@@ -58,7 +58,7 @@
     - 410 Gone レスポンス時の Subscription 自動削除
     - _Requirements: 5.2, 5.3, 5.5, 6.1, 6.2, 6.4, 7.1, 7.2, 7.4_
 
-  - [ ] 3.2 Visibility 状態管理の実装
+  - [x] 3.2 Visibility 状態管理の実装
     - `server/src/index.ts` に `userVisibility` Map を追加
     - Socket.IO `visibility-state` イベントハンドラを追加
     - key: `${userSub}:${roomId}`, value: `'foreground' | 'background'`
@@ -95,7 +95,7 @@
     - テストファイル: `server/src/__tests__/pushService.test.ts`
     - **Validates: Requirements 6.5**
 
-  - [ ] 3.8 Push API ルートの実装 (`server/src/routes/push.ts`)
+  - [x] 3.8 Push API ルートの実装 (`server/src/routes/push.ts`)
     - `GET /api/push/vapid-public-key`: VAPID 公開鍵を返す
     - `POST /api/push/subscribe`: 認証必須、Subscription を登録
     - `DELETE /api/push/subscribe`: 認証必須、Subscription を削除
@@ -104,24 +104,24 @@
     - `server/src/index.ts` にルートをマウント
     - _Requirements: 3.3, 3.4, 3.5, 5.1, 5.2, 5.3_
 
-- [ ] 4. チェックポイント - サーバー側テスト確認
+- [x] 4. チェックポイント - サーバー側テスト確認
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. クライアント側 PWA 基盤
-  - [ ] 5.1 Vite PWA プラグインの設定
+- [x] 5. クライアント側 PWA 基盤
+  - [x] 5.1 Vite PWA プラグインの設定
     - `vite-plugin-pwa` パッケージを `client` の devDependencies に追加
     - `client/vite.config.ts` に `VitePWA` プラグインを追加
     - Web App Manifest 設定（name, short_name, icons, theme_color, display, start_url, scope）
     - `injectManifest` モードで Service Worker カスタムロジックを統合
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [ ] 5.2 Service Worker カスタムロジックの実装 (`client/src/sw.ts`)
+  - [x] 5.2 Service Worker カスタムロジックの実装 (`client/src/sw.ts`)
     - `push` イベントリスナー: ペイロード解析と `showNotification` 呼び出し
     - `notificationclick` イベントリスナー: 通知タップ時の URL ナビゲーション (`/web_rtc/room/${roomId}`)
     - 既存タブのフォーカスまたは新規タブの開設ロジック
     - _Requirements: 2.1, 2.4, 2.5_
 
-  - [ ] 5.3 PWA アイコンの配置
+  - [x] 5.3 PWA アイコンの配置
     - `client/public/icons/icon-192x192.png` と `client/public/icons/icon-512x512.png` を配置
     - _Requirements: 1.1, 1.4_
 
@@ -143,11 +143,11 @@
     - テストファイル: `client/src/__tests__/pushHandler.test.ts`
     - **Validates: Requirements 2.5, 5.4, 6.3, 7.3**
 
-- [ ] 6. チェックポイント - PWA 基盤テスト確認
+- [x] 6. チェックポイント - PWA 基盤テスト確認
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. クライアント側フックと UI コンポーネント
-  - [ ] 7.1 usePushNotification フックの実装 (`client/src/hooks/usePushNotification.ts`)
+- [x] 7. クライアント側フックと UI コンポーネント
+  - [x] 7.1 usePushNotification フックの実装 (`client/src/hooks/usePushNotification.ts`)
     - `isSupported`: Push API サポート有無の判定
     - `permission`: 現在の通知許可状態
     - `isSubscribed`: 購読中かどうかの状態管理
@@ -156,57 +156,57 @@
     - Push API 非サポート時の graceful degradation
     - _Requirements: 3.1, 3.2, 3.3, 3.5, 3.6_
 
-  - [ ] 7.2 useVisibilityState フックの実装 (`client/src/hooks/useVisibilityState.ts`)
+  - [x] 7.2 useVisibilityState フックの実装 (`client/src/hooks/useVisibilityState.ts`)
     - Page Visibility API による状態検出
     - Socket.IO 経由で `visibility-state` イベントを送信
     - `document.visibilityState` の変化を監視
     - _Requirements: 8.1, 8.2, 8.3_
 
-  - [ ] 7.3 NotificationPrompt コンポーネントの実装 (`client/src/components/NotificationPrompt.tsx`)
+  - [x] 7.3 NotificationPrompt コンポーネントの実装 (`client/src/components/NotificationPrompt.tsx`)
     - 通知許可が `default` 状態の時のみ表示
     - 「通知を有効にする」ボタンで `usePushNotification.subscribe()` を呼び出し
     - Push API 非サポート時は非表示
     - Dashboard に統合
     - _Requirements: 3.1, 3.2, 3.3, 3.6_
 
-  - [ ] 7.4 InviteDialog コンポーネントの実装 (`client/src/components/InviteDialog.tsx`)
+  - [x] 7.4 InviteDialog コンポーネントの実装 (`client/src/components/InviteDialog.tsx`)
     - Dashboard のルームカードから「URL 共有」ボタン押下時に表示
     - 登録ユーザー一覧から送信先を選択
     - POST /api/push/invite で招待通知を送信
     - 送信結果（成功/失敗件数）を表示
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ] 7.5 ログアウト時の Subscription 削除
+  - [x] 7.5 ログアウト時の Subscription 削除
     - `AuthContext.tsx` のログアウト処理に Subscription 削除ロジックを追加
     - DELETE /api/push/subscribe を呼び出し
     - _Requirements: 3.7_
 
-- [ ] 8. Socket.IO イベント連携と通知トリガー統合
-  - [ ] 8.1 チャットメッセージ通知トリガーの統合
+- [x] 8. Socket.IO イベント連携と通知トリガー統合
+  - [x] 8.1 チャットメッセージ通知トリガーの統合
     - `server/src/index.ts` の `chat-message` イベントハンドラに PushService 呼び出しを追加
     - バックグラウンド状態の参加者にのみ通知送信
     - 送信者自身を除外
     - 通知タグ `chat-${roomId}` でグループ化
     - _Requirements: 6.1, 6.2, 6.4, 6.5_
 
-  - [ ] 8.2 ユーザー入室通知トリガーの統合
+  - [x] 8.2 ユーザー入室通知トリガーの統合
     - `server/src/index.ts` の `join-room` イベントハンドラに PushService 呼び出しを追加
     - バックグラウンド状態の参加者にのみ通知送信
     - 入室者自身を除外
     - _Requirements: 7.1, 7.2, 7.4_
 
-  - [ ] 8.3 useVisibilityState フックの Room ページへの統合
+  - [x] 8.3 useVisibilityState フックの Room ページへの統合
     - `client/src/pages/RoomPage.tsx` に `useVisibilityState` フックを追加
     - ルーム参加時に visibility 状態の送信を開始
     - _Requirements: 8.1, 8.2, 8.3_
 
-  - [ ] 8.4 Service Worker 更新プロンプトの統合
+  - [x] 8.4 Service Worker 更新プロンプトの統合
     - `vite-plugin-pwa` の `useRegisterSW` フックを使用
     - 新しい Service Worker が利用可能な時にユーザーに更新を促す UI を表示
     - `client/src/App.tsx` または適切なレイアウトコンポーネントに統合
     - _Requirements: 2.2, 2.3_
 
-- [ ] 9. 最終チェックポイント - 全テスト確認
+- [x] 9. 最終チェックポイント - 全テスト確認
   - Ensure all tests pass, ask the user if questions arise.
 
 ## 備考
