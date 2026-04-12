@@ -115,6 +115,21 @@ npm run dev
 
 ### .env ファイルの作成手順
 
+すべての方法共通で、まず `.env.example` をコピーして値を埋めます。
+
+```bash
+# ルート
+cp .env.example .env
+
+# クライアント
+cp client/.env.example client/.env
+
+# サーバー
+cp server/.env.example server/.env
+```
+
+各ファイルを開いて、取得した `GOOGLE_CLIENT_ID` や生成した `JWT_SECRET` を設定してください。
+
 #### 方法1: Docker Compose の場合
 
 3 つのファイルを作成します。
