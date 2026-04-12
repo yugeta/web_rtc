@@ -17,7 +17,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (idToken: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -80,11 +80,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Unsubscribe from push notifications before clearing auth state
+    try {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          const currentToken = token;
+          await fetch(`${SERVER_URL}/api/push/subscribe`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+            },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+          });
+        }
+      }
+    } catch {
+      // Don't block logout if push unsubscribe fails
+    }
+
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-  }, []);
+  }, [token]);
 
   const isAuthenticated = user !== null && token !== null;
 

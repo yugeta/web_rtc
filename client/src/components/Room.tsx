@@ -6,6 +6,7 @@ import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
 import ChatPanel from './ChatPanel';
 import { useHeader } from '../contexts/HeaderContext';
+import { useVisibilityState } from '../hooks/useVisibilityState';
 
 interface RoomProps {
   roomId: string;
@@ -165,6 +166,12 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
   const peersRef = useRef<{ [socketId: string]: Peer.Instance }>({});
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+
+  // Socket state for hooks that need reactive socket reference
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  // Visibility state management (Requirements: 8.1, 8.2, 8.3)
+  useVisibilityState(socket, roomId);
 
   useEffect(() => {
     let isMounted = true;
@@ -335,6 +342,7 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
         socketRef.current = io(SERVER_URL, {
           auth: token ? { token } : undefined,
         });
+        setSocket(socketRef.current);
 
         // 3. ルーム参加（ユーザー名も送信）
         socketRef.current.emit('join-room', { roomId, userName });
@@ -424,6 +432,7 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
       if (socketRef.current) {
         socketRef.current.disconnect();
       }
+      setSocket(null);
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
       }

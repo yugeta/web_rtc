@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Copy, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Copy, ExternalLink, Send, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationPrompt from '../components/NotificationPrompt';
+import InviteDialog from '../components/InviteDialog';
 import './Dashboard.css';
 
 type PermissionState = 'granted' | 'denied' | 'prompt' | 'unsupported' | 'checking';
@@ -53,6 +55,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
   const permissions = usePermissionCheck();
 
   const fetchRooms = useCallback(async () => {
@@ -133,7 +136,7 @@ export default function Dashboard() {
             </span>
           </div>
         )}
-
+        <NotificationPrompt />
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 
         <form onSubmit={handleCreateRoom} className="dashboard-create-form">
@@ -162,6 +165,9 @@ export default function Dashboard() {
                   <button onClick={() => handleCopyUrl(room.id)} title="参加用 URL をコピー" style={{ background: copiedId === room.id ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border)' }}>
                     <Copy size={13} /><span className="btn-label">{copiedId === room.id ? 'コピー済み' : 'URL 共有'}</span>
                   </button>
+                  <button onClick={() => setInviteRoomId(room.id)} title="招待通知を送信" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border)' }}>
+                    <Send size={13} /><span className="btn-label">招待</span>
+                  </button>
                   <button onClick={() => handleDeleteRoom(room.id)} title="Room を削除" className="danger">
                     <Trash2 size={13} />
                   </button>
@@ -169,6 +175,9 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        )}
+        {inviteRoomId && (
+          <InviteDialog roomId={inviteRoomId} onClose={() => setInviteRoomId(null)} />
         )}
       </main>
   );
