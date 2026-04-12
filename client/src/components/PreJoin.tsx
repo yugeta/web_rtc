@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ChevronUp, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
 
 // MediaSettings型をexport
 export type MediaSettings = {
@@ -57,27 +57,56 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
   const videoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
+  // 権限チェック状態
+  const [permissionDenied, setPermissionDenied] = useState<string[]>([]);
+  const [permissionChecked, setPermissionChecked] = useState(false);
+
   // Cookieから設定を読み込む
   useEffect(() => {
-    const savedAudioEnabled = getCookie('isAudioEnabled');
-    const savedVideoEnabled = getCookie('isVideoEnabled');
-    const savedSpeakerEnabled = getCookie('isSpeakerEnabled');
-    const savedAudioDevice = getCookie('audioDeviceId');
-    const savedVideoDevice = getCookie('videoDeviceId');
-    const savedOutputDevice = getCookie('outputDeviceId');
-    
-    if (savedAudioEnabled !== null) setIsAudioEnabled(savedAudioEnabled === 'true');
-    if (savedVideoEnabled !== null) setIsVideoEnabled(savedVideoEnabled === 'true');
-    if (savedSpeakerEnabled !== null) setIsSpeakerEnabled(savedSpeakerEnabled === 'true');
-    
-    // デバイスIDは後で検証してから設定
-    initializeMedia(
-      savedAudioDevice,
-      savedVideoDevice,
-      savedOutputDevice,
-      savedAudioEnabled === 'true',
-      savedVideoEnabled === 'true'
-    );
+    const checkPermissionsAndInit = async () => {
+      // Permissions API で事前チェック
+      const denied: string[] = [];
+      try {
+        const [cam, mic] = await Promise.all([
+          navigator.permissions.query({ name: 'camera' as PermissionName }).catch(() => null),
+          navigator.permissions.query({ name: 'microphone' as PermissionName }).catch(() => null),
+        ]);
+        if (cam?.state === 'denied') denied.push('カメラ');
+        if (mic?.state === 'denied') denied.push('マイク');
+      } catch {
+        // Permissions API 未対応（Safari等）→ getUserMedia で判定させる
+      }
+
+      if (denied.length > 0) {
+        setPermissionDenied(denied);
+        setPermissionChecked(true);
+        return;
+      }
+
+      setPermissionChecked(true);
+
+      // 権限がブロックされていなければメディア初期化へ
+      const savedAudioEnabled = getCookie('isAudioEnabled');
+      const savedVideoEnabled = getCookie('isVideoEnabled');
+      const savedSpeakerEnabled = getCookie('isSpeakerEnabled');
+      const savedAudioDevice = getCookie('audioDeviceId');
+      const savedVideoDevice = getCookie('videoDeviceId');
+      const savedOutputDevice = getCookie('outputDeviceId');
+
+      if (savedAudioEnabled !== null) setIsAudioEnabled(savedAudioEnabled === 'true');
+      if (savedVideoEnabled !== null) setIsVideoEnabled(savedVideoEnabled === 'true');
+      if (savedSpeakerEnabled !== null) setIsSpeakerEnabled(savedSpeakerEnabled === 'true');
+
+      initializeMedia(
+        savedAudioDevice,
+        savedVideoDevice,
+        savedOutputDevice,
+        savedAudioEnabled === null ? true : savedAudioEnabled === 'true',
+        savedVideoEnabled === null ? true : savedVideoEnabled === 'true'
+      );
+    };
+
+    checkPermissionsAndInit();
   }, []);
 
   const initializeMedia = async (
@@ -176,7 +205,7 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
       localStreamRef.current = stream;
     } catch (err) {
       console.error('Failed to get media:', err);
-      alert('カメラ、またはマイクへのアクセスが拒否されました。');
+      setPermissionDenied(['カメラ', 'マイク']);
     }
   };
 
@@ -330,6 +359,24 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
         <p className="prejoin-desc">
           {userName} として {roomName || roomId} に参加します
         </p>
+
+        {/* 権限ブロック時のガイダンス */}
+        {permissionDenied.length > 0 ? (
+          <>
+            <div className="permission-banner" style={{ marginBottom: '24px' }}>
+              <AlertTriangle size={16} />
+              <span>
+                {permissionDenied.join('・')}へのアクセスがブロックされています。
+                ブラウザのアドレスバー付近の設定から許可した後、再度お試しください。
+              </span>
+            </div>
+            <div className="prejoin-actions">
+              <button onClick={onCancel} className="prejoin-cancel">戻る</button>
+              <button onClick={() => window.location.reload()} className="primary prejoin-join">再読み込み</button>
+            </div>
+          </>
+        ) : (
+          <>
         
         {/* ビデオプレビュー */}
         <div className="video-preview-container">
@@ -481,6 +528,8 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
             参加する
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
