@@ -204,6 +204,7 @@ curl -s https://sock.mynt.work/api/push/vapid-public-key
 
 1. ブラウザで `https://yugeta.github.io/web_rtc/` にアクセス
 2. ログイン後、Dashboard に「通知を有効にする」バナーが表示されることを確認
+   - 表示されない場合: GitHub Actions の Secrets に `VITE_VAPID_PUBLIC_KEY` が設定されていないか、ビルド時に環境変数が渡されていない可能性があります。DevTools Console で `VITE_VAPID_PUBLIC_KEY` の値を確認してください
 3. Chrome DevTools → Application → Manifest でマニフェスト情報を確認
 4. Chrome DevTools → Application → Service Workers で SW が登録されていることを確認
 
