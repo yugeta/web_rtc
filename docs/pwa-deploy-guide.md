@@ -99,6 +99,92 @@ main に push（server/** に変更がある場合）
 
 ---
 
+## 本番サーバーへの手動反映手順
+
+自動デプロイが未設定の場合や、手動で反映する必要がある場合の手順です。
+
+### 1. コードの更新とビルド
+
+```bash
+ssh ubuntu@<VPSのIPアドレス>
+cd /var/www/web_rtc
+
+# ローカル変更（package-lock.json 等）がある場合は退避
+git stash
+
+git pull origin main
+
+cd server
+npm install
+npm run build      # TypeScript → dist/ にコンパイル（必須）
+```
+
+> `git pull` だけでは `src/` が更新されるだけです。PM2 が実行する `dist/index.js` は `npm run build` しないと反映されません。
+
+### 2. PM2 の起動設定（dotenv の読み込み）
+
+PM2 で直接 `dist/index.js` を起動すると、`server/.env` が読み込まれません。`-r dotenv/config` オプションが必要です。
+
+```bash
+cd /var/www/web_rtc/server
+
+# 既存プロセスを削除して再起動
+pm2 delete webrtc-server
+pm2 start dist/index.js \
+  --name webrtc-server \
+  --node-args="-r dotenv/config" \
+  --max-memory-restart 400M
+pm2 save
+```
+
+または、ecosystem ファイルで管理する方法:
+
+```bash
+cd /var/www/web_rtc/server
+cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'webrtc-server',
+    script: 'dist/index.js',
+    node_args: '-r dotenv/config',
+    max_memory_restart: '400M',
+  }]
+};
+EOF
+
+pm2 delete webrtc-server
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+### 3. 動作確認
+
+```bash
+# VAPID 公開鍵が返るか確認
+curl -s https://sock.mynt.work/api/push/vapid-public-key
+# → {"publicKey":"..."} が返れば OK
+
+# サーバーログを確認
+pm2 logs webrtc-server --lines 20
+# → "Warning: Push notification disabled..." が出ていなければ VAPID 鍵は正常に読み込まれている
+```
+
+### 以降の更新時
+
+初回で PM2 に `--node-args="-r dotenv/config"` を設定済みなら、以降は:
+
+```bash
+cd /var/www/web_rtc
+git stash
+git pull origin main
+cd server
+npm install
+npm run build
+pm2 restart webrtc-server
+```
+
+---
+
 ## 確認方法
 
 ### サーバー側
