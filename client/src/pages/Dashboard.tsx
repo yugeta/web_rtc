@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+<<<<<<< HEAD
 import { Plus, Trash2, Copy, ExternalLink, Send, AlertTriangle } from 'lucide-react';
+=======
+import { Plus, Trash2, Copy, ExternalLink, Send } from 'lucide-react';
+>>>>>>> a6338a7 (antigravity/devide_issue)
 import { useAuth } from '../contexts/AuthContext';
 import NotificationPrompt from '../components/NotificationPrompt';
 import InviteDialog from '../components/InviteDialog';
@@ -56,7 +60,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
+<<<<<<< HEAD
   const permissions = usePermissionCheck();
+=======
+>>>>>>> a6338a7 (antigravity/devide_issue)
 
   const fetchRooms = useCallback(async () => {
     if (!token) return;
@@ -127,6 +134,7 @@ export default function Dashboard() {
 
   return (
     <main className="dashboard-main">
+<<<<<<< HEAD
         {deniedPermissions.length > 0 && (
           <div className="permission-banner">
             <AlertTriangle size={16} />
@@ -136,6 +144,8 @@ export default function Dashboard() {
             </span>
           </div>
         )}
+=======
+>>>>>>> a6338a7 (antigravity/devide_issue)
         <NotificationPrompt />
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'simple-peer';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff, Menu, X, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ChevronUp, Volume2, VolumeX, Monitor, MonitorOff, Menu, X, MessageSquare, Check } from 'lucide-react';
 import AudioVisualizer from './AudioVisualizer';
 import ScreenShareView from './ScreenShareView';
 import ChatPanel from './ChatPanel';
@@ -256,11 +256,19 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
           ? { deviceId: { ideal: audioDeviceId } }
           : true;
         
+        // initialSettings からビデオデバイスIDを取得して制約を設定
+        const videoDeviceId = initialSettings?.videoDeviceId || '';
+        const videoConstraints = videoDeviceId && videoDeviceId !== 'default'
+          ? { deviceId: { ideal: videoDeviceId } }
+          : true;
+        
         console.log('[Room] Selected audio device ID:', audioDeviceId || 'Browser default');
         console.log('[Room] Using audio constraints:', audioConstraints);
+        console.log('[Room] Selected video device ID:', videoDeviceId || 'Browser default');
+        console.log('[Room] Using video constraints:', videoConstraints);
         
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
+          video: videoConstraints, 
           audio: audioConstraints
         });
         
@@ -1101,33 +1109,75 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
                 {showAudioMenu && (
                   <div className="device-menu">
                     <div className="device-menu-title">マイク</div>
-                    {audioDevices.length > 0 ? (
-                      audioDevices.map((device, idx) => (
-                        <div 
-                          key={device.deviceId || String(idx)} 
-                          className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
-                          onClick={() => changeAudioDevice(device.deviceId)}
-                        >
-                          {device.label || `Microphone ${idx + 1}`}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="device-menu-item empty">No devices found</div>
-                    )}
+                    
+                    {/* システム既定の選択肢 */}
+                    <div 
+                      className={`device-menu-item ${selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '' ? 'selected' : ''}`}
+                      onClick={() => changeAudioDevice('default')}
+                    >
+                      <div className="device-item-info">
+                        <span className="device-item-label">システム既定のマイク</span>
+                      </div>
+                      {(selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '') && <Check size={14} className="check-icon" />}
+                    </div>
+                    
                     <div className="device-menu-divider" />
-                    <div className="device-menu-title">スピーカー</div>
-                    {audioOutputDevices.length > 0 ? (
-                      audioOutputDevices.map((device, idx) => (
-                        <div 
-                          key={device.deviceId || String(idx)} 
-                          className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
-                          onClick={() => changeOutputDevice(device.deviceId)}
-                        >
-                          {device.label || `Speaker ${idx + 1}`}
-                        </div>
-                      ))
+                    
+                    {/* 物理デバイス一覧 */}
+                    {audioDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                      audioDevices
+                        .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                        .map((device, idx) => (
+                          <div 
+                            key={device.deviceId || String(idx)} 
+                            className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
+                            onClick={() => changeAudioDevice(device.deviceId)}
+                          >
+                            <div className="device-item-info">
+                              <span className="device-item-label">{device.label || `マイク ${idx + 1}`}</span>
+                            </div>
+                            {device.deviceId === selectedAudioDeviceId && <Check size={14} className="check-icon" />}
+                          </div>
+                        ))
                     ) : (
-                      <div className="device-menu-item empty">No devices found</div>
+                      <div className="device-menu-item empty">利用可能なマイクがありません</div>
+                    )}
+                    
+                    <div className="device-menu-divider-large" />
+                    
+                    <div className="device-menu-title">スピーカー</div>
+                    
+                    {/* システム既定の選択肢 */}
+                    <div 
+                      className={`device-menu-item ${selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '' ? 'selected' : ''}`}
+                      onClick={() => changeOutputDevice('default')}
+                    >
+                      <div className="device-item-info">
+                        <span className="device-item-label">システム既定のスピーカー</span>
+                      </div>
+                      {(selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '') && <Check size={14} className="check-icon" />}
+                    </div>
+                    
+                    <div className="device-menu-divider" />
+                    
+                    {/* 物理デバイス一覧 */}
+                    {audioOutputDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                      audioOutputDevices
+                        .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                        .map((device, idx) => (
+                          <div 
+                            key={device.deviceId || String(idx)} 
+                            className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
+                            onClick={() => changeOutputDevice(device.deviceId)}
+                          >
+                            <div className="device-item-info">
+                              <span className="device-item-label">{device.label || `スピーカー ${idx + 1}`}</span>
+                            </div>
+                            {device.deviceId === selectedOutputDeviceId && <Check size={14} className="check-icon" />}
+                          </div>
+                        ))
+                    ) : (
+                      <div className="device-menu-item empty">利用可能なスピーカーがありません</div>
                     )}
                   </div>
                 )}
@@ -1167,18 +1217,23 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
                 {showVideoMenu && (
                   <div className="device-menu">
                     <div className="device-menu-title">カメラ</div>
-                    {videoDevices.length > 0 ? (
-                      videoDevices.map((device, idx) => (
-                        <div 
-                          key={device.deviceId || String(idx)} 
-                          className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
-                          onClick={() => changeVideoDevice(device.deviceId)}
-                        >
-                          {device.label || `Camera ${idx + 1}`}
-                        </div>
-                      ))
+                    {videoDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                      videoDevices
+                        .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                        .map((device, idx) => (
+                          <div 
+                            key={device.deviceId || String(idx)} 
+                            className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
+                            onClick={() => changeVideoDevice(device.deviceId)}
+                          >
+                            <div className="device-item-info">
+                              <span className="device-item-label">{device.label || `カメラ ${idx + 1}`}</span>
+                            </div>
+                            {device.deviceId === selectedVideoDeviceId && <Check size={14} className="check-icon" />}
+                          </div>
+                        ))
                     ) : (
-                      <div className="device-menu-item empty">No devices found</div>
+                      <div className="device-menu-item empty">利用可能なカメラがありません</div>
                     )}
                   </div>
                 )}

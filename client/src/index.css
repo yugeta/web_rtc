@@ -312,32 +312,51 @@ input:focus {
   position: absolute;
   bottom: 100%;
   left: 0;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   background: rgba(15, 23, 42, 0.95);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   padding: 8px 0;
-  min-width: 240px;
+  min-width: 250px;
   max-width: 320px;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  animation: dropdown-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdown-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .device-menu-title {
-  padding: 8px 16px;
+  padding: 8px 16px 6px 16px;
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   margin-bottom: 4px;
 }
 
 .device-menu-divider {
   height: 1px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
   margin: 6px 0;
+}
+
+.device-menu-divider-large {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 12px 0 8px 0;
 }
 
 .icon-small-standalone {
@@ -368,20 +387,69 @@ input:focus {
   padding: 10px 16px;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-main);
 }
 
 .device-menu-item:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .device-menu-item.selected {
   color: var(--accent);
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.15);
+  font-weight: 500;
+}
+
+.device-item-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.device-item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-item-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.check-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  animation: checkmark-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes checkmark-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.device-menu-item.empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  cursor: default;
+  pointer-events: none;
 }
 
 /* 画面共有レイアウト */

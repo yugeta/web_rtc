@@ -44,6 +44,7 @@ export function usePushNotification(): UsePushNotificationReturn {
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Check existing subscription on mount
+<<<<<<< HEAD
   // If permission is already granted but no subscription exists, auto-subscribe
   useEffect(() => {
     if (!isSupported) return;
@@ -88,6 +89,22 @@ export function usePushNotification(): UsePushNotificationReturn {
     }
 
     checkAndAutoSubscribe();
+=======
+  useEffect(() => {
+    if (!isSupported) return;
+
+    async function checkSubscription() {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        setIsSubscribed(subscription !== null);
+      } catch {
+        // Silently handle - subscription check failed
+      }
+    }
+
+    checkSubscription();
+>>>>>>> a6338a7 (antigravity/devide_issue)
   }, [isSupported]);
 
   const subscribe = useCallback(async () => {
