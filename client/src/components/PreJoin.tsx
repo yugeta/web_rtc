@@ -88,11 +88,19 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
     videoEnabled: boolean
   ) => {
     try {
-      // まず権限を取得するために一旦getUserMediaを呼ぶ
-      // これによりenumerateDevicesでラベル付きのデバイスリストが取得できる
+      // 最初から保存されている好ましいデバイスIDで初期ストリームを要求する。
+      // これにより、起動時の不必要なデバイス切り替え（二重起動）を防止する。
+      const initialAudioConstraints = savedAudioDevice && savedAudioDevice !== 'default' && savedAudioDevice !== 'communications'
+        ? { deviceId: { ideal: savedAudioDevice } }
+        : true;
+      
+      const initialVideoConstraints = savedVideoDevice && savedVideoDevice !== 'default'
+        ? { deviceId: { ideal: savedVideoDevice } }
+        : true;
+
       const tempStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true
+        audio: initialAudioConstraints,
+        video: initialVideoConstraints
       });
 
       // デバイスリストを取得（権限取得後なのでラベルが取れる）
@@ -148,22 +156,42 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
       setSelectedVideoDeviceId(videoDeviceId);
       setSelectedOutputDeviceId(outputDeviceId);
       
-      // 一時ストリームを停止
-      tempStream.getTracks().forEach(track => track.stop());
+      // 現在起動中のトラックのデバイスIDを検証
+      const activeAudioTrack = tempStream.getAudioTracks()[0];
+      const activeAudioDeviceId = activeAudioTrack?.getSettings().deviceId;
+      const activeVideoTrack = tempStream.getVideoTracks()[0];
+      const activeVideoDeviceId = activeVideoTrack?.getSettings().deviceId;
 
-      // 選択したデバイスでメディアストリームを再取得
-      const audioConstraints = audioDeviceId && audioDeviceId !== 'default' && audioDeviceId !== 'communications'
-        ? { deviceId: { ideal: audioDeviceId } }
-        : true;
+      // 現在起動しているトラックのデバイスIDと、最終選択されたデバイスIDが一致しているか判定
+      const isAudioMatched = activeAudioDeviceId === audioDeviceId ||
+        (audioDeviceId === 'default' && (!activeAudioDeviceId || activeAudioDeviceId === 'default' || audioInputs.find(d => d.deviceId === activeAudioDeviceId)?.label.toLowerCase().includes('default')));
       
-      const videoConstraints = videoDeviceId && videoDeviceId !== 'default'
-        ? { deviceId: { ideal: videoDeviceId } }
-        : true;
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints,
-        video: videoConstraints
-      });
+      const isVideoMatched = activeVideoDeviceId === videoDeviceId ||
+        (videoDeviceId === 'default' && (!activeVideoDeviceId || activeVideoDeviceId === 'default'));
+
+      let stream = tempStream;
+
+      if (isAudioMatched && isVideoMatched) {
+        console.log('[PreJoin] Initial stream matches target devices perfectly. Reusing it seamlessly.');
+      } else {
+        console.log('[PreJoin] Stream mismatch detected. Stopping initial stream and recreating.');
+        // 一時ストリームを停止
+        tempStream.getTracks().forEach(track => track.stop());
+
+        // 選択したデバイスでメディアストリームを再取得
+        const audioConstraints = audioDeviceId && audioDeviceId !== 'default' && audioDeviceId !== 'communications'
+          ? { deviceId: { ideal: audioDeviceId } }
+          : true;
+        
+        const videoConstraints = videoDeviceId && videoDeviceId !== 'default'
+          ? { deviceId: { ideal: videoDeviceId } }
+          : true;
+        
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints,
+          video: videoConstraints
+        });
+      }
       
       // 初期状態を適用
       const audioTrack = stream.getAudioTracks()[0];
