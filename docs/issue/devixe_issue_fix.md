@@ -15,10 +15,10 @@
   - 不一致の場合のみ、古いストリームをクリーンアップして再取得（フォールバック）する。
 
 ### 【タスク2】 `Room.tsx` の初期ビデオデバイスの起動バグ修正
-- [ ] **2.1 `initialSettings` に基づくカメラ制約の設定**
+- [x] **2.1 `initialSettings` に基づくカメラ制約の設定**
   - 現在 `Room.tsx` の初期化時に `video: true` とハードコードされている部分を修正。
   - `initialSettings?.videoDeviceId` を判定し、`videoConstraints = { deviceId: { ideal: videoDeviceId } }` を動的に生成する。
-- [ ] **2.2 `Room` 起動時の指定カメラ適用**
+- [x] **2.2 `Room` 起動時の指定カメラ適用**
   - `getUserMedia` に上記の `videoConstraints` を渡し、事前選択されたカメラが一発で起動するように修正する。
 
 ### 【タスク3】 `PreJoin.tsx` のデバイスドロップダウンUIのスマート化

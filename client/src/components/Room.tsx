@@ -256,11 +256,19 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
           ? { deviceId: { ideal: audioDeviceId } }
           : true;
         
+        // initialSettings からビデオデバイスIDを取得して制約を設定
+        const videoDeviceId = initialSettings?.videoDeviceId || '';
+        const videoConstraints = videoDeviceId && videoDeviceId !== 'default'
+          ? { deviceId: { ideal: videoDeviceId } }
+          : true;
+        
         console.log('[Room] Selected audio device ID:', audioDeviceId || 'Browser default');
         console.log('[Room] Using audio constraints:', audioConstraints);
+        console.log('[Room] Selected video device ID:', videoDeviceId || 'Browser default');
+        console.log('[Room] Using video constraints:', videoConstraints);
         
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
+          video: videoConstraints, 
           audio: audioConstraints
         });
         
