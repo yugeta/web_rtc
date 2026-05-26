@@ -1,45 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-<<<<<<< HEAD
-import { Plus, Trash2, Copy, ExternalLink, Send, AlertTriangle } from 'lucide-react';
-=======
 import { Plus, Trash2, Copy, ExternalLink, Send } from 'lucide-react';
->>>>>>> a6338a7 (antigravity/devide_issue)
 import { useAuth } from '../contexts/AuthContext';
 import NotificationPrompt from '../components/NotificationPrompt';
 import InviteDialog from '../components/InviteDialog';
 import './Dashboard.css';
-
-type PermissionState = 'granted' | 'denied' | 'prompt' | 'unsupported' | 'checking';
-
-interface PermissionStatus {
-  camera: PermissionState;
-  microphone: PermissionState;
-}
-
-function usePermissionCheck() {
-  const [status, setStatus] = useState<PermissionStatus>({ camera: 'checking', microphone: 'checking' });
-
-  useEffect(() => {
-    let mounted = true;
-
-    const check = async (name: string): Promise<PermissionState> => {
-      try {
-        const result = await navigator.permissions.query({ name: name as PermissionName });
-        return result.state as PermissionState;
-      } catch {
-        return 'unsupported';
-      }
-    };
-
-    Promise.all([check('camera'), check('microphone')]).then(([cam, mic]) => {
-      if (mounted) setStatus({ camera: cam, microphone: mic });
-    });
-
-    return () => { mounted = false; };
-  }, []);
-
-  return status;
-}
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
@@ -60,10 +24,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
-<<<<<<< HEAD
-  const permissions = usePermissionCheck();
-=======
->>>>>>> a6338a7 (antigravity/devide_issue)
 
   const fetchRooms = useCallback(async () => {
     if (!token) return;
@@ -128,24 +88,8 @@ export default function Dashboard() {
     return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
-  const deniedPermissions: string[] = [];
-  if (permissions.camera === 'denied') deniedPermissions.push('カメラ');
-  if (permissions.microphone === 'denied') deniedPermissions.push('マイク');
-
   return (
     <main className="dashboard-main">
-<<<<<<< HEAD
-        {deniedPermissions.length > 0 && (
-          <div className="permission-banner">
-            <AlertTriangle size={16} />
-            <span>
-              {deniedPermissions.join('・')}へのアクセスがブロックされています。
-              ブラウザのアドレスバー付近の設定から許可してください。
-            </span>
-          </div>
-        )}
-=======
->>>>>>> a6338a7 (antigravity/devide_issue)
         <NotificationPrompt />
         {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 

@@ -44,52 +44,6 @@ export function usePushNotification(): UsePushNotificationReturn {
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Check existing subscription on mount
-<<<<<<< HEAD
-  // If permission is already granted but no subscription exists, auto-subscribe
-  useEffect(() => {
-    if (!isSupported) return;
-
-    async function checkAndAutoSubscribe() {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-
-        if (subscription) {
-          setIsSubscribed(true);
-          return;
-        }
-
-        // permission が granted なのに Subscription がない場合、自動登録
-        if (Notification.permission === 'granted') {
-          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer;
-          const newSubscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey,
-          });
-
-          const token = localStorage.getItem(TOKEN_KEY);
-          if (!token) return; // 未ログインなら登録しない
-
-          const response = await fetch(`${SERVER_URL}/api/push/subscribe`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ subscription: newSubscription.toJSON() }),
-          });
-
-          if (response.ok) {
-            setIsSubscribed(true);
-          }
-        }
-      } catch {
-        // Silently handle - subscription check/auto-subscribe failed
-      }
-    }
-
-    checkAndAutoSubscribe();
-=======
   useEffect(() => {
     if (!isSupported) return;
 
@@ -104,7 +58,6 @@ export function usePushNotification(): UsePushNotificationReturn {
     }
 
     checkSubscription();
->>>>>>> a6338a7 (antigravity/devide_issue)
   }, [isSupported]);
 
   const subscribe = useCallback(async () => {
