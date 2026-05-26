@@ -1013,6 +1013,7 @@ const Room: React.FC<RoomProps> = ({ roomId, roomName, userName, initialSettings
       }
       
       setSelectedOutputDeviceId(deviceId);
+      setShowAudioMenu(false);
     } catch (err) {
       console.error('Failed to change output device:', err);
       alert('スピーカーの切り替えに失敗しました。ブラウザがこの機能をサポートしているか確認してください。');
