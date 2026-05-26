@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ChevronUp, Volume2, VolumeX, Check } from 'lucide-react';
 
 // MediaSettings型をexport
 export type MediaSettings = {
@@ -406,16 +406,40 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
               
               {showAudioMenu && (
                 <div className="device-menu">
-                  <div className="device-menu-title">Select Microphone</div>
-                  {audioDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeAudioDevice(device.deviceId)}
-                    >
-                      {device.label || `Microphone ${idx + 1}`}
+                  <div className="device-menu-title">マイク</div>
+                  
+                  {/* システム既定の選択肢 */}
+                  <div 
+                    className={`device-menu-item ${selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '' ? 'selected' : ''}`}
+                    onClick={() => changeAudioDevice('default')}
+                  >
+                    <div className="device-item-info">
+                      <span className="device-item-label">システム既定のマイク</span>
                     </div>
-                  ))}
+                    {(selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '') && <Check size={14} className="check-icon" />}
+                  </div>
+                  
+                  <div className="device-menu-divider" />
+                  
+                  {/* 物理デバイス一覧 */}
+                  {audioDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    audioDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeAudioDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `マイク ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedAudioDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なマイクがありません</div>
+                  )}
                 </div>
               )}
             </div>
@@ -442,16 +466,25 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
               
               {showVideoMenu && (
                 <div className="device-menu">
-                  <div className="device-menu-title">Select Camera</div>
-                  {videoDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeVideoDevice(device.deviceId)}
-                    >
-                      {device.label || `Camera ${idx + 1}`}
-                    </div>
-                  ))}
+                  <div className="device-menu-title">カメラ</div>
+                  {videoDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    videoDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeVideoDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `カメラ ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedVideoDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なカメラがありません</div>
+                  )}
                 </div>
               )}
             </div>
@@ -478,16 +511,40 @@ const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, o
               
               {showOutputMenu && (
                 <div className="device-menu">
-                  <div className="device-menu-title">Select Speaker</div>
-                  {audioOutputDevices.map((device, idx) => (
-                    <div 
-                      key={device.deviceId || String(idx)} 
-                      className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
-                      onClick={() => changeOutputDevice(device.deviceId)}
-                    >
-                      {device.label || `Speaker ${idx + 1}`}
+                  <div className="device-menu-title">スピーカー</div>
+                  
+                  {/* システム既定の選択肢 */}
+                  <div 
+                    className={`device-menu-item ${selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '' ? 'selected' : ''}`}
+                    onClick={() => changeOutputDevice('default')}
+                  >
+                    <div className="device-item-info">
+                      <span className="device-item-label">システム既定のスピーカー</span>
                     </div>
-                  ))}
+                    {(selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '') && <Check size={14} className="check-icon" />}
+                  </div>
+                  
+                  <div className="device-menu-divider" />
+                  
+                  {/* 物理デバイス一覧 */}
+                  {audioOutputDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    audioOutputDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeOutputDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `スピーカー ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedOutputDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なスピーカーがありません</div>
+                  )}
                 </div>
               )}
             </div>
