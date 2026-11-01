@@ -22,6 +22,8 @@ export default function AdminEnvStatus() {
     if (!token) return;
 
     setLoading(true);
+    setError(null);
+
     try {
       const res = await fetch(`${SERVER_URL}/api/admin/env-status`, {
         headers: { Authorization: 'Bearer ' + token },
@@ -33,9 +35,9 @@ export default function AdminEnvStatus() {
 
       const data: EnvStatusReport = await res.json();
       setReport(data);
-      setError(null);
       setUpdatedAt(new Date().toLocaleString('ja-JP'));
     } catch {
+      setReport(null);
       setError('環境設定の取得に失敗しました');
     } finally {
       setLoading(false);
@@ -80,15 +82,19 @@ export default function AdminEnvStatus() {
         <h2 style={{ fontSize: '1.1rem', margin: 0 }}>環境設定状態</h2>
         <button type="button" className="admin-env-refresh" onClick={fetchStatus} disabled={loading}>
           <RefreshCcw size={14} style={{ transform: loading ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }} />
-          {loading ? '更新中...' : '更新'}
+          {loading ? '取得中...' : '再取得'}
         </button>
       </div>
 
       {updatedAt && <div className="admin-env-updated">最終更新: {updatedAt}</div>}
       {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
 
-      {!report ? (
+      {loading && !report ? (
         <p style={{ color: 'var(--text-muted)' }}>読み込み中...</p>
+      ) : !report ? (
+        <div style={{ color: 'var(--text-muted)', padding: '12px 0' }}>
+          環境設定を取得できませんでした。再取得を押して状態を確認してください。
+        </div>
       ) : (
         <>
           <div className="admin-env-summary">
