@@ -34,18 +34,44 @@ const fmtUptime = (s: number) => {
 
 const fmtMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
 
+const buildHealthErrorMessage = (error: unknown) => {
+  const status = error instanceof Error && /HTTP\s+(\d+)/.test(error.message) ? error.message.match(/HTTP\s+(\d+)/)?.[1] : null;
+
+  const detail = status ? `HTTP ${status} で応答が返ってきていません。` : 'サーバー API との接続に失敗しました。';
+
+  return {
+    summary: `${detail} 次の順で確認してください。`,
+    steps: [
+      '1. QNAP の Container Station で docker compose ps を確認し、webrtc-sock が起動しているか確認します。',
+      '2. 起動していなければ、docker ディレクトリで docker compose up -d を実行してください。',
+      '3. 管理者アカウントの Google User ID が ADMIN_USER_IDS に含まれているか確認してください。',
+      '4. それでも失敗する場合は、docker logs webrtc-sock を確認してサーバーの起動エラーを確認してください。',
+    ],
+  };
+};
+
 export default function AdminMonitor() {
   const { token } = useAuth();
   const [health, setHealth] = useState<HealthData | null>(null);
   const [history, setHistory] = useState<ChartPoint[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ summary: string; steps: string[] } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchHealth = async () => {
     if (!token) return;
     try {
       const res = await fetch(`${SERVER_URL}/api/admin/health`, { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        let bodyText = '';
+        try {
+          const json = await res.clone().json();
+          bodyText = json?.error ? ` (${json.error})` : '';
+        } catch {
+          bodyText = '';
+        }
+        throw new Error(`HTTP ${res.status}${bodyText}`);
+      }
+
       const data: HealthData = await res.json();
       setHealth(data);
       setError(null);
@@ -54,7 +80,9 @@ export default function AdminMonitor() {
         const next = [...prev, { time: t, memory: parseFloat(fmtMB(data.memoryUsage.heapUsed)), connections: data.activeConnections, rooms: data.activeRooms }];
         return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
       });
-    } catch { setError('ヘルスチェックに失敗しました'); }
+    } catch (err) {
+      setError(buildHealthErrorMessage(err));
+    }
   };
 
   useEffect(() => {
@@ -84,7 +112,16 @@ export default function AdminMonitor() {
   return (
     <>
       <h2 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>サーバーモニター</h2>
-      {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
+      {error && (
+        <div className="admin-monitor-error" style={{ marginBottom: '12px' }}>
+          <p className="admin-monitor-error-summary">{error.summary}</p>
+          <ul className="admin-monitor-error-list">
+            {error.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {health && (
         <>
