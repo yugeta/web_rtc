@@ -233,6 +233,45 @@
   font-size: 13px;
 }
 
+.admin-env-error {
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.15);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.admin-env-error-summary {
+  margin: 0 0 8px;
+  color: #fecaca;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.admin-env-error-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.admin-env-checklist {
+  margin-bottom: 16px;
+}
+
+.admin-env-checklist-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .admin-monitor-error {
   border: 1px solid rgba(248, 113, 113, 0.45);
   background: rgba(127, 29, 29, 0.15);

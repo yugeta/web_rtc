@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock the virtual module before importing the component
 const mockUpdateServiceWorker = vi.fn().mockResolvedValue(undefined);
 let mockNeedRefresh = false;
 const mockSetNeedRefresh = vi.fn();
 
 vi.mock('virtual:pwa-register/react', () => ({
   useRegisterSW: (options?: { onRegisterError?: (error: unknown) => void }) => {
-    // Store options for testing error handler
     if (options?.onRegisterError) {
       (vi.mock as unknown as Record<string, unknown>).__onRegisterError = options.onRegisterError;
     }
@@ -38,8 +36,8 @@ describe('ReloadPrompt', () => {
   it('renders update prompt when needRefresh is true', () => {
     mockNeedRefresh = true;
     render(<ReloadPrompt />);
-    expect(screen.getByText('新しいバージョンが利用可能です')).toBeInTheDocument();
-    expect(screen.getByText('更新する')).toBeInTheDocument();
+    expect(screen.getByText('アプリの更新を反映するには再読み込みが必要です')).toBeInTheDocument();
+    expect(screen.getByText('更新して再読込')).toBeInTheDocument();
   });
 
   it('calls updateServiceWorker when update button is clicked', async () => {
@@ -47,7 +45,7 @@ describe('ReloadPrompt', () => {
     const user = userEvent.setup();
     render(<ReloadPrompt />);
 
-    await user.click(screen.getByText('更新する'));
+    await user.click(screen.getByText('更新して再読込'));
     expect(mockUpdateServiceWorker).toHaveBeenCalledWith(true);
   });
 
@@ -58,6 +56,15 @@ describe('ReloadPrompt', () => {
 
     await user.click(screen.getByLabelText('閉じる'));
     expect(mockSetNeedRefresh).toHaveBeenCalledWith(false);
+  });
+
+  it('renders the success notice after update completes', async () => {
+    mockNeedRefresh = true;
+    const user = userEvent.setup();
+    render(<ReloadPrompt />);
+
+    await user.click(screen.getByText('更新して再読込'));
+    expect(screen.getByText('更新しました。ページを再読込しています。')).toBeInTheDocument();
   });
 
   it('has role="alert" for accessibility', () => {

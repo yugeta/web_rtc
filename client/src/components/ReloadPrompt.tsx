@@ -1,7 +1,9 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { CheckCircle2, RefreshCw, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './ReloadPrompt.css';
+
+const SUCCESS_AUTO_CLOSE_MS = 1400;
 
 function ReloadPrompt() {
   const {
@@ -18,6 +20,17 @@ function ReloadPrompt() {
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUpdated, setIsUpdated] = useState(false);
+
+  useEffect(() => {
+    if (!isUpdated) return;
+
+    const timer = window.setTimeout(() => {
+      setIsUpdated(false);
+      setNeedRefresh(false);
+    }, SUCCESS_AUTO_CLOSE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isUpdated, setNeedRefresh]);
 
   if (!needRefresh && !isUpdated) return null;
 

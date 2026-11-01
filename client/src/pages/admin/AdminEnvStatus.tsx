@@ -4,12 +4,20 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const POLL_INTERVAL = 30000;
+const REQUEST_TIMEOUT_MS = 10000;
 
 interface EnvStatusReport {
   ok: string[];
   missing: string[];
   warning: string[];
 }
+
+const failureGuidance = [
+  'サーバーが停止していないか',
+  '認証トークンが有効か',
+  'GOOGLE_CLIENT_ID と JWT_SECRET が設定されているか',
+  'Docker の再起動が必要か',
+];
 
 export default function AdminEnvStatus() {
   const { token } = useAuth();
@@ -21,12 +29,16 @@ export default function AdminEnvStatus() {
   const fetchStatus = async () => {
     if (!token) return;
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     setLoading(true);
     setError(null);
 
     try {
       const res = await fetch(`${SERVER_URL}/api/admin/env-status`, {
         headers: { Authorization: 'Bearer ' + token },
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -36,10 +48,15 @@ export default function AdminEnvStatus() {
       const data: EnvStatusReport = await res.json();
       setReport(data);
       setUpdatedAt(new Date().toLocaleString('ja-JP'));
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error && err.name === 'AbortError'
+        ? '環境設定の取得がタイムアウトしました。サーバーまたは認証状態を確認してください。'
+        : '環境設定の取得に失敗しました';
+
       setReport(null);
-      setError('環境設定の取得に失敗しました');
+      setError(message);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -87,10 +104,19 @@ export default function AdminEnvStatus() {
       </div>
 
       {updatedAt && <div className="admin-env-updated">最終更新: {updatedAt}</div>}
-      {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
+      {error && (
+        <div className="admin-env-error" role="alert">
+          <p className="admin-env-error-summary">{error}</p>
+          <ul className="admin-env-error-list">
+            {failureGuidance.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading && !report ? (
-        <p style={{ color: 'var(--text-muted)' }}>読み込み中...</p>
+        <p style={{ color: 'var(--text-muted)' }}>環境設定を確認しています...</p>
       ) : !report ? (
         <div style={{ color: 'var(--text-muted)', padding: '12px 0' }}>
           環境設定を取得できませんでした。再取得を押して状態を確認してください。
@@ -112,10 +138,18 @@ export default function AdminEnvStatus() {
             </div>
           </div>
 
+          {report.missing.length > 0 && (
+            <div className="admin-env-checklist">
+              <div className="admin-env-checklist-title">不足している設定</div>
+              <div className="admin-env-grid">
+                {renderList('不足', report.missing, 'danger')}
+              </div>
+            </div>
+          )}
+
           <div className="admin-env-grid">
             {renderList('設定済み', report.ok, 'ok')}
             {renderList('要確認', report.warning, 'warn')}
-            {renderList('不足', report.missing, 'danger')}
           </div>
         </>
       )}
