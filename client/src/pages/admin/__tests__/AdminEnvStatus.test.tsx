@@ -25,20 +25,22 @@ describe('AdminEnvStatus', () => {
     expect(screen.queryByText('読み込み中...')).not.toBeInTheDocument();
   });
 
-  it('lists the failing environment checks when the report is loaded', async () => {
+  it('shows the initial setup checklist and required values', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        ok: ['VAPID_PUBLIC_KEY'],
-        missing: ['GOOGLE_CLIENT_ID', 'JWT_SECRET'],
-        warning: ['TURN_USERNAME'],
+        ok: ['GOOGLE_CLIENT_ID'],
+        missing: ['JWT_SECRET', 'ADMIN_USER_IDS'],
+        warning: ['VAPID_PUBLIC_KEY', 'TURN_USERNAME'],
       }),
     });
 
     render(<AdminEnvStatus />);
 
-    expect(await screen.findByText('GOOGLE_CLIENT_ID')).toBeInTheDocument();
-    expect(await screen.findByText('JWT_SECRET')).toBeInTheDocument();
-    expect(screen.getByText('不足している設定')).toBeInTheDocument();
+    expect(await screen.findByText('初期設定')).toBeInTheDocument();
+    expect(screen.getByText('JWT_SECRET')).toBeInTheDocument();
+    expect(screen.getByText('ADMIN_USER_IDS')).toBeInTheDocument();
+    expect(screen.getByText('通知設定')).toBeInTheDocument();
+    expect(screen.getByText('WebRTC / TURN')).toBeInTheDocument();
   });
 });

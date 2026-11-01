@@ -4,7 +4,7 @@ export type EnvStatusReport = {
   warning: string[];
 };
 
-const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'JWT_SECRET'] as const;
+const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'JWT_SECRET', 'ADMIN_USER_IDS'] as const;
 const optionalEnvVars = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT', 'EXTERNAL_IP', 'TURN_REALM', 'TURN_USERNAME', 'TURN_PASSWORD'] as const;
 
 export function buildEnvStatusReport(env: NodeJS.ProcessEnv): EnvStatusReport {

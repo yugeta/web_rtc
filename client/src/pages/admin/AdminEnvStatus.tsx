@@ -19,6 +19,41 @@ const failureGuidance = [
   'Docker の再起動が必要か',
 ];
 
+const sectionDefinitions = [
+  {
+    key: 'initial',
+    title: '初期設定',
+    items: ['GOOGLE_CLIENT_ID', 'JWT_SECRET', 'ADMIN_USER_IDS'],
+    description: 'ログインと管理画面の基盤です。',
+  },
+  {
+    key: 'notification',
+    title: '通知設定',
+    items: ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'],
+    description: 'Push 通知の送信に必要です。',
+  },
+  {
+    key: 'webrtc',
+    title: 'WebRTC / TURN',
+    items: ['EXTERNAL_IP', 'TURN_REALM', 'TURN_USERNAME', 'TURN_PASSWORD'],
+    description: '通話接続と NAT 越えに必要です。',
+  },
+  {
+    key: 'network',
+    title: '外部疎通',
+    items: ['stun.mynt.work', 'sock.mynt.work', '3478 / 5349', '443 / 80'],
+    description: 'サブドメインとポートの疎通確認を行います。',
+  },
+] as const;
+
+const getStatusTone = (value: string, report: EnvStatusReport | null): 'ok' | 'warn' | 'danger' => {
+  if (!report) return 'warn';
+  if (report.missing.includes(value)) return 'danger';
+  if (report.warning.includes(value)) return 'warn';
+  if (report.ok.includes(value)) return 'ok';
+  return 'warn';
+};
+
 export default function AdminEnvStatus() {
   const { token } = useAuth();
   const [report, setReport] = useState<EnvStatusReport | null>(null);
@@ -67,28 +102,28 @@ export default function AdminEnvStatus() {
     return () => clearInterval(timer);
   }, [token]);
 
-  const renderList = (title: string, items: string[], tone: 'ok' | 'warn' | 'danger') => {
-    const sortedItems = [...items].sort((a, b) => a.localeCompare(b, 'ja'));
+  const renderSection = (section: typeof sectionDefinitions[number]) => {
+    const items = section.items.map((item) => ({
+      name: item,
+      tone: getStatusTone(item, report),
+    }));
 
     return (
-      <div className={`admin-env-panel ${tone}`}>
-        <div className="admin-env-panel-header">
-          {tone === 'ok' ? <CheckCircle2 size={16} /> : tone === 'warn' ? <AlertTriangle size={16} /> : <ShieldAlert size={16} />}
-          <span>{title}</span>
-          <span className="admin-env-panel-count">{sortedItems.length}</span>
+      <div className="admin-env-section" key={section.key}>
+        <div className="admin-env-section-header">
+          <div>
+            <h3>{section.title}</h3>
+            <p>{section.description}</p>
+          </div>
         </div>
 
-        {sortedItems.length === 0 ? (
-          <div className="admin-env-empty">なし</div>
-        ) : (
-          <div className="admin-env-list">
-            {sortedItems.map((item) => (
-              <span key={item} className={`admin-env-pill ${tone}`}>
-                {item}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="admin-env-items">
+          {items.map(({ name, tone }) => (
+            <span key={name} className={`admin-env-pill ${tone}`}>
+              {name}
+            </span>
+          ))}
+        </div>
       </div>
     );
   };
@@ -96,7 +131,7 @@ export default function AdminEnvStatus() {
   return (
     <>
       <div className="admin-env-header">
-        <h2 style={{ fontSize: '1.1rem', margin: 0 }}>環境設定状態</h2>
+        <h2 style={{ fontSize: '1.1rem', margin: 0 }}>環境設定</h2>
         <button type="button" className="admin-env-refresh" onClick={fetchStatus} disabled={loading}>
           <RefreshCcw size={14} style={{ transform: loading ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }} />
           {loading ? '取得中...' : '再取得'}
@@ -138,18 +173,9 @@ export default function AdminEnvStatus() {
             </div>
           </div>
 
-          {report.missing.length > 0 && (
-            <div className="admin-env-checklist">
-              <div className="admin-env-checklist-title">不足している設定</div>
-              <div className="admin-env-grid">
-                {renderList('不足', report.missing, 'danger')}
-              </div>
-            </div>
-          )}
-
-          <div className="admin-env-grid">
-            {renderList('設定済み', report.ok, 'ok')}
-            {renderList('要確認', report.warning, 'warn')}
+          <div className="admin-env-checklist">
+            <div className="admin-env-checklist-title">初期設定チェック</div>
+            <div className="admin-env-grid">{sectionDefinitions.map(renderSection)}</div>
           </div>
         </>
       )}
