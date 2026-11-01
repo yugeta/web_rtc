@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  coturn:
+    image: coturn/coturn:latest
+    container_name: webrtc-coturn
+    restart: unless-stopped
+    ports:
+      - "${TURN_PORT:-3478}:${TURN_PORT:-3478}/udp"
+      - "${TURN_PORT:-3478}:${TURN_PORT:-3478}/tcp"
+      - "${TURNS_PORT:-5349}:${TURNS_PORT:-5349}/udp"
+      - "${TURNS_PORT:-5349}:${TURNS_PORT:-5349}/tcp"
+    volumes:
+      - ./certs:/etc/coturn/certs:ro
+    command:
+      - "--log-file=stdout"
+      - "--external-ip=${EXTERNAL_IP}"
+      - "--listening-port=${TURN_PORT:-3478}"
+      - "--tls-listening-port=${TURNS_PORT:-5349}"
+      - "--realm=${TURN_REALM:-stun.mynt.work}"
+      - "--min-port=${TURN_MIN_PORT:-49152}"
+      - "--max-port=${TURN_MAX_PORT:-65535}"
+      - "--fingerprint"
+      - "--lt-cred-mech"
+      - "--user=${TURN_USERNAME:-mynt}:${TURN_PASSWORD:-myntpass}"
+      - "--cert=/etc/coturn/certs/fullchain.pem"
+      - "--pkey=/etc/coturn/certs/privkey.pem"
+
+  sock:
+    build:
+      context: /share/Web/web_rtc.mynt.work/server
+      dockerfile: Dockerfile
+    container_name: webrtc-sock
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./.env
+    environment:
+      PORT: "3001"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      TZ: Asia/Tokyo
+    command: sh -c "npm run build && npm run start"
+    depends_on:
+      - coturn

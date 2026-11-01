@@ -1,0 +1,27 @@
+.DS_Store
+Thumbs.db
+
+trash/
+data/
+
+*.bak
+
+.vscode
+
+nohup*
+
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env*.local
+
+# Chat logs
+server/chat-logs/

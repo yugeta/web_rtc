@@ -1,0 +1,574 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, Video, VideoOff, ChevronUp, Volume2, VolumeX, Check } from 'lucide-react';
+
+// MediaSettings型をexport
+export type MediaSettings = {
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
+  isSpeakerEnabled: boolean;
+  audioDeviceId: string;
+  videoDeviceId: string;
+  outputDeviceId: string;
+};
+
+interface PreJoinProps {
+  userName: string;
+  roomId: string;
+  roomName?: string;
+  onJoin: (settings: MediaSettings) => void;
+  onCancel: () => void;
+}
+
+// Cookie管理
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+  return null;
+};
+
+const setCookie = (name: string, value: string, days: number = 365) => {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  const expires = `expires=${date.toUTCString()}`;
+  document.cookie = `${name}=${value};${expires};path=/`;
+};
+
+const PreJoin: React.FC<PreJoinProps> = ({ userName, roomId, roomName, onJoin, onCancel }) => {
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(true);
+  
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDeviceInfo[]>([]);
+  
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState<string>('');
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState<string>('');
+  const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>('');
+  
+  const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const [showVideoMenu, setShowVideoMenu] = useState(false);
+  const [showOutputMenu, setShowOutputMenu] = useState(false);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+
+  // Cookieから設定を読み込む
+  useEffect(() => {
+    const savedAudioEnabled = getCookie('isAudioEnabled');
+    const savedVideoEnabled = getCookie('isVideoEnabled');
+    const savedSpeakerEnabled = getCookie('isSpeakerEnabled');
+    const savedAudioDevice = getCookie('audioDeviceId');
+    const savedVideoDevice = getCookie('videoDeviceId');
+    const savedOutputDevice = getCookie('outputDeviceId');
+    
+    if (savedAudioEnabled !== null) setIsAudioEnabled(savedAudioEnabled === 'true');
+    if (savedVideoEnabled !== null) setIsVideoEnabled(savedVideoEnabled === 'true');
+    if (savedSpeakerEnabled !== null) setIsSpeakerEnabled(savedSpeakerEnabled === 'true');
+    
+    // デバイスIDは後で検証してから設定
+    initializeMedia(
+      savedAudioDevice,
+      savedVideoDevice,
+      savedOutputDevice,
+      savedAudioEnabled === 'true',
+      savedVideoEnabled === 'true'
+    );
+  }, []);
+
+  const initializeMedia = async (
+    savedAudioDevice: string | null,
+    savedVideoDevice: string | null,
+    savedOutputDevice: string | null,
+    audioEnabled: boolean,
+    videoEnabled: boolean
+  ) => {
+    try {
+      // 最初から保存されている好ましいデバイスIDで初期ストリームを要求する。
+      // これにより、起動時の不必要なデバイス切り替え（二重起動）を防止する。
+      const initialAudioConstraints = savedAudioDevice && savedAudioDevice !== 'default' && savedAudioDevice !== 'communications'
+        ? { deviceId: { ideal: savedAudioDevice } }
+        : true;
+      
+      const initialVideoConstraints = savedVideoDevice && savedVideoDevice !== 'default'
+        ? { deviceId: { ideal: savedVideoDevice } }
+        : true;
+
+      const tempStream = await navigator.mediaDevices.getUserMedia({
+        audio: initialAudioConstraints,
+        video: initialVideoConstraints
+      });
+
+      // デバイスリストを取得（権限取得後なのでラベルが取れる）
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(d => d.kind === 'audioinput');
+      const videoInputs = devices.filter(d => d.kind === 'videoinput');
+      const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+      
+      setAudioDevices(audioInputs);
+      setVideoDevices(videoInputs);
+      setAudioOutputDevices(audioOutputs);
+      
+      // OSの既定デバイスを探す
+      const defaultAudioDevice = audioInputs.find(d => {
+        const label = d.label.toLowerCase();
+        return (
+          label.includes('既定') ||
+          label.includes('規定') ||
+          label.includes('default') ||
+          label.includes('默认') ||
+          label.includes('預設') ||
+          label.includes('기본') ||
+          label.includes('défaut') ||
+          label.includes('predeterminado') ||
+          label.includes('padrão') ||
+          label.includes('standard') ||
+          label.includes('standaard') ||
+          label.includes('predefinito') ||
+          d.deviceId === 'default' ||
+          d.deviceId === 'communications'
+        );
+      });
+      
+      // 保存されたデバイスが存在するか確認
+      const audioDeviceExists = savedAudioDevice && audioInputs.some(d => d.deviceId === savedAudioDevice);
+      const videoDeviceExists = savedVideoDevice && videoInputs.some(d => d.deviceId === savedVideoDevice);
+      const outputDeviceExists = savedOutputDevice && audioOutputs.some(d => d.deviceId === savedOutputDevice);
+      
+      // デバイスIDを決定
+      const audioDeviceId = audioDeviceExists 
+        ? savedAudioDevice 
+        : (defaultAudioDevice?.deviceId || (audioInputs[0]?.deviceId || 'default'));
+      
+      const videoDeviceId = videoDeviceExists
+        ? savedVideoDevice
+        : (videoInputs[0]?.deviceId || 'default');
+      
+      const outputDeviceId = outputDeviceExists
+        ? savedOutputDevice
+        : (audioOutputs[0]?.deviceId || 'default');
+      
+      setSelectedAudioDeviceId(audioDeviceId);
+      setSelectedVideoDeviceId(videoDeviceId);
+      setSelectedOutputDeviceId(outputDeviceId);
+      
+      // 現在起動中のトラックのデバイスIDを検証
+      const activeAudioTrack = tempStream.getAudioTracks()[0];
+      const activeAudioDeviceId = activeAudioTrack?.getSettings().deviceId;
+      const activeVideoTrack = tempStream.getVideoTracks()[0];
+      const activeVideoDeviceId = activeVideoTrack?.getSettings().deviceId;
+
+      // 現在起動しているトラックのデバイスIDと、最終選択されたデバイスIDが一致しているか判定
+      const isAudioMatched = activeAudioDeviceId === audioDeviceId ||
+        (audioDeviceId === 'default' && (!activeAudioDeviceId || activeAudioDeviceId === 'default' || audioInputs.find(d => d.deviceId === activeAudioDeviceId)?.label.toLowerCase().includes('default')));
+      
+      const isVideoMatched = activeVideoDeviceId === videoDeviceId ||
+        (videoDeviceId === 'default' && (!activeVideoDeviceId || activeVideoDeviceId === 'default'));
+
+      let stream = tempStream;
+
+      if (isAudioMatched && isVideoMatched) {
+        console.log('[PreJoin] Initial stream matches target devices perfectly. Reusing it seamlessly.');
+      } else {
+        console.log('[PreJoin] Stream mismatch detected. Stopping initial stream and recreating.');
+        // 一時ストリームを停止
+        tempStream.getTracks().forEach(track => track.stop());
+
+        // 選択したデバイスでメディアストリームを再取得
+        const audioConstraints = audioDeviceId && audioDeviceId !== 'default' && audioDeviceId !== 'communications'
+          ? { deviceId: { ideal: audioDeviceId } }
+          : true;
+        
+        const videoConstraints = videoDeviceId && videoDeviceId !== 'default'
+          ? { deviceId: { ideal: videoDeviceId } }
+          : true;
+        
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints,
+          video: videoConstraints
+        });
+      }
+      
+      // 初期状態を適用
+      const audioTrack = stream.getAudioTracks()[0];
+      const videoTrack = stream.getVideoTracks()[0];
+      
+      if (audioTrack) audioTrack.enabled = audioEnabled;
+      if (videoTrack) videoTrack.enabled = videoEnabled;
+      
+      setLocalStream(stream);
+      localStreamRef.current = stream;
+    } catch (err) {
+      console.error('Failed to get media:', err);
+      alert('カメラ、またはマイクへのアクセスが拒否されました。');
+    }
+  };
+
+  // クリーンアップ
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // localStreamが変わったらvideoRefに反映
+  useEffect(() => {
+    if (videoRef.current && localStream) {
+      videoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  const toggleAudio = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsAudioEnabled(audioTrack.enabled);
+        setCookie('isAudioEnabled', String(audioTrack.enabled));
+      }
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoEnabled(videoTrack.enabled);
+        setCookie('isVideoEnabled', String(videoTrack.enabled));
+      }
+    }
+  };
+
+  const toggleSpeaker = () => {
+    const newState = !isSpeakerEnabled;
+    setIsSpeakerEnabled(newState);
+    setCookie('isSpeakerEnabled', String(newState));
+  };
+
+  const changeAudioDevice = async (deviceId: string) => {
+    if (!deviceId) return;
+    
+    try {
+      const constraints = {
+        video: false,
+        audio: deviceId === 'default' ? true : { deviceId: deviceId }
+      };
+      
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      
+      if (localStreamRef.current && newAudioTrack) {
+        const oldAudioTrack = localStreamRef.current.getAudioTracks()[0];
+        
+        if (oldAudioTrack) {
+          localStreamRef.current.removeTrack(oldAudioTrack);
+          oldAudioTrack.stop();
+        }
+        
+        localStreamRef.current.addTrack(newAudioTrack);
+        newAudioTrack.enabled = isAudioEnabled;
+        
+        const updatedStream = new MediaStream(localStreamRef.current.getTracks());
+        setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
+        
+        setSelectedAudioDeviceId(deviceId);
+        setCookie('audioDeviceId', deviceId);
+        setShowAudioMenu(false);
+      }
+    } catch (err) {
+      console.error('Failed to change audio device:', err);
+      alert('マイクの切り替えに失敗しました。');
+    }
+  };
+
+  const changeVideoDevice = async (deviceId: string) => {
+    if (!deviceId) return;
+    
+    try {
+      const constraints = {
+        audio: false,
+        video: deviceId === 'default' ? true : { deviceId: deviceId }
+      };
+      
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      
+      if (localStreamRef.current && newVideoTrack) {
+        const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+        
+        if (oldVideoTrack) {
+          localStreamRef.current.removeTrack(oldVideoTrack);
+          oldVideoTrack.stop();
+        }
+        
+        localStreamRef.current.addTrack(newVideoTrack);
+        newVideoTrack.enabled = isVideoEnabled;
+        
+        const updatedStream = new MediaStream(localStreamRef.current.getTracks());
+        setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = updatedStream;
+        }
+        
+        setSelectedVideoDeviceId(deviceId);
+        setCookie('videoDeviceId', deviceId);
+        setShowVideoMenu(false);
+      }
+    } catch (err) {
+      console.error('Failed to change video device:', err);
+      alert('カメラの切り替えに失敗しました。');
+    }
+  };
+
+  const changeOutputDevice = (deviceId: string) => {
+    if (!deviceId) return;
+    setSelectedOutputDeviceId(deviceId);
+    setCookie('outputDeviceId', deviceId);
+    setShowOutputMenu(false);
+  };
+
+  const handleJoin = () => {
+    const settings: MediaSettings = {
+      isAudioEnabled,
+      isVideoEnabled,
+      isSpeakerEnabled,
+      audioDeviceId: selectedAudioDeviceId,
+      videoDeviceId: selectedVideoDeviceId,
+      outputDeviceId: selectedOutputDeviceId
+    };
+    
+    // ストリームは停止せずに渡す
+    onJoin(settings);
+  };
+
+  return (
+    <div className="home-container">
+      <div className="glass-panel prejoin-panel">
+        <h2 className="prejoin-title">会議に参加する準備</h2>
+        <p className="prejoin-desc">
+          {userName} として {roomName || roomId} に参加します
+        </p>
+        
+        {/* ビデオプレビュー */}
+        <div className="video-preview-container">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="video-preview"
+            data-visible={!!(localStream && isVideoEnabled)}
+          />
+          {!localStream && (
+            <div className="video-preview-overlay">
+              <div className="video-preview-spinner" />
+              <div>カメラを準備しています...</div>
+            </div>
+          )}
+          {localStream && !isVideoEnabled && (
+            <div className="video-preview-overlay">
+              <VideoOff size={48} className="video-preview-icon" />
+              <div>カメラがオフです</div>
+            </div>
+          )}
+        </div>
+        
+        {/* コントロール */}
+        <div className="controls-bar prejoin-controls">
+          {/* マイク */}
+          <div className="control-group">
+            <button 
+              className={`icon ${!isAudioEnabled ? 'active' : ''}`} 
+              onClick={toggleAudio}
+              title="Toggle Mic"
+            >
+              {isAudioEnabled ? <Mic /> : <MicOff />}
+            </button>
+            
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowAudioMenu(!showAudioMenu)}
+                title="Select Microphone"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showAudioMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">マイク</div>
+                  
+                  {/* システム既定の選択肢 */}
+                  <div 
+                    className={`device-menu-item ${selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '' ? 'selected' : ''}`}
+                    onClick={() => changeAudioDevice('default')}
+                  >
+                    <div className="device-item-info">
+                      <span className="device-item-label">システム既定のマイク</span>
+                    </div>
+                    {(selectedAudioDeviceId === 'default' || selectedAudioDeviceId === '') && <Check size={14} className="check-icon" />}
+                  </div>
+                  
+                  <div className="device-menu-divider" />
+                  
+                  {/* 物理デバイス一覧 */}
+                  {audioDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    audioDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedAudioDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeAudioDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `マイク ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedAudioDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なマイクがありません</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* カメラ */}
+          <div className="control-group">
+            <button 
+              className={`icon ${!isVideoEnabled ? 'active' : ''}`} 
+              onClick={toggleVideo}
+              title="Toggle Video"
+            >
+              {isVideoEnabled ? <Video /> : <VideoOff />}
+            </button>
+            
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowVideoMenu(!showVideoMenu)}
+                title="Select Camera"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showVideoMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">カメラ</div>
+                  {videoDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    videoDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedVideoDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeVideoDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `カメラ ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedVideoDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なカメラがありません</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* スピーカー */}
+          <div className="control-group">
+            <button 
+              className={`icon ${!isSpeakerEnabled ? 'active' : ''}`} 
+              onClick={toggleSpeaker}
+              title="Toggle Speaker"
+            >
+              {isSpeakerEnabled ? <Volume2 /> : <VolumeX />}
+            </button>
+            
+            <div>
+              <button 
+                className="icon-small" 
+                onClick={() => setShowOutputMenu(!showOutputMenu)}
+                title="Select Speaker"
+              >
+                <ChevronUp size={16} />
+              </button>
+              
+              {showOutputMenu && (
+                <div className="device-menu">
+                  <div className="device-menu-title">スピーカー</div>
+                  
+                  {/* システム既定の選択肢 */}
+                  <div 
+                    className={`device-menu-item ${selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '' ? 'selected' : ''}`}
+                    onClick={() => changeOutputDevice('default')}
+                  >
+                    <div className="device-item-info">
+                      <span className="device-item-label">システム既定のスピーカー</span>
+                    </div>
+                    {(selectedOutputDeviceId === 'default' || selectedOutputDeviceId === '') && <Check size={14} className="check-icon" />}
+                  </div>
+                  
+                  <div className="device-menu-divider" />
+                  
+                  {/* 物理デバイス一覧 */}
+                  {audioOutputDevices.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications').length > 0 ? (
+                    audioOutputDevices
+                      .filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                      .map((device, idx) => (
+                        <div 
+                          key={device.deviceId || String(idx)} 
+                          className={`device-menu-item ${device.deviceId === selectedOutputDeviceId ? 'selected' : ''}`}
+                          onClick={() => changeOutputDevice(device.deviceId)}
+                        >
+                          <div className="device-item-info">
+                            <span className="device-item-label">{device.label || `スピーカー ${idx + 1}`}</span>
+                          </div>
+                          {device.deviceId === selectedOutputDeviceId && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="device-menu-item empty">利用可能なスピーカーがありません</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* ボタン */}
+        <div className="prejoin-actions">
+          <button 
+            onClick={onCancel}
+            className="prejoin-cancel"
+          >
+            キャンセル
+          </button>
+          <button 
+            onClick={handleJoin}
+            className="primary prejoin-join"
+          >
+            参加する
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PreJoin;
