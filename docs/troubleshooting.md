@@ -153,6 +153,76 @@ docker logs --tail 200 webrtc-sock
 - `app@1.0.0 start` から Node.js が起動する
 - `webrtc-sock` が `Up` で継続稼働する
 
+### 12. 本番運用での最短修正プレイブック
+
+1. 確認
+   - docker ps -a
+   - docker logs --tail 200 webrtc-sock
+   - docker exec -it webrtc-sock env | sort | grep -E 'VAPID|GOOGLE|JWT|ADMIN'
+
+2. 判定
+   - VAPID_KEY が証明書のパス形式になっていないか
+   - node_modules が存在しているか
+   - /api/admin/health が応答しているか
+
+3. 修正
+   - ホスト側の .env を更新
+   - VAPID_PUBLIC_KEY と VAPID_PRIVATE_KEY を web-push generate-vapid-keys で生成した値に置換
+   - docker compose up -d --force-recreate webrtc-sock
+
+4. 再確認
+   - docker logs --tail 200 webrtc-sock
+   - curl -I https://sock.mynt.work/api/admin/health
+
+### 13. 失敗時の切り分けルール
+
+- webrtc-sock が Restarting で落ちる → Docker 起動時の構成・環境変数問題を優先
+- webrtc-coturn が Up だが sock が落ちる → sock の依存や VAPID 設定を確認
+- API は起動しているが 401/403 が返る → JWT / auth / ADMIN_USER_IDS を確認
+- API そのものが返らない → node_modules / 起動失敗 / port issue を確認
+
+### 14. 現在の構成における設計上の修正ポイント
+
+今回提示された構成は、NPM（nginx-proxy-manager）と web-rtc の `sock` が「同じ Docker ネットワークに属していない」状態で、公開入口とバックエンドが分離されていない。
+
+そのため、最重要の修正ポイントは次の3点。
+
+1. `sock.mynt.work` の公開入口は NPM 側が担当する
+   - `443` は NPM の TLS 終端で受ける
+   - `webrtc-sock` は 3001 で内部サービスとして動く
+
+2. `webrtc-sock` は `localhost` ではなく、Docker ネットワーク上のサービス名で接続する
+   - 例: `http://webrtc-sock:3001`
+   - `localhost:3001` は別コンテナの中では自分自身しか指さない
+
+3. NPM と web-rtc は共通ネットワークに乗せる
+   - `proxy_pass http://webrtc-sock:3001;`
+   - これがないと、ドメインの公開はあってもアプリには到達しない
+
+### 15. できていない設計の境界線
+
+今回の構成では、次のような関係を明確に持つ必要がある。
+
+- `sock.mynt.work` → NPM の SSL / 443 / ドメイン公開
+- NPM → `webrtc-sock:3001` へのプロキシ転送
+- `webrtc-sock` → Express / Socket.IO の API 提供
+- `stun.mynt.work` → coturn の直接公開（3478 / 5349）
+
+つまり、`docker-compose.yml` にある `sock` が `ports: "3001:3001"` を公開していても、それだけではブラウザの `https://sock.mynt.work` に繋がらない。
+
+本番公開の入口が別レイヤーで必要であり、その入口である NPM の設定とネットワーク接続が未整備である。
+
+### 16. 実運用での最小修正方針
+
+- NPM と web-rtc を同じ Docker network に統一
+- NPM に `sock.mynt.work` の Proxy Host を作成
+- Proxy target を `http://webrtc-sock:3001` に設定
+- `webrtc-sock` の 3001 ポートは外部公開を止めるか、内部専用として扱う
+- `stun.mynt.work` は TURN サービスとして直接公開する
+- 証明書は `sock.mynt.work` に対して正しい SAN を持つものを使う
+
+この設計にすると、`https://sock.mynt.work` へアクセスした際に、NPM がそのリクエストを `webrtc-sock` に正しく転送できる。
+
 ## クライアント側の問題
 
 ### カメラ/マイクが動作しない

@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  web_network:
+    external: true
+
 services:
   coturn:
     image: coturn/coturn:latest
@@ -48,3 +52,5 @@ services:
     command: sh -c "npm run build && npm run start"
     depends_on:
       - coturn
+    networks:
+      - web_network

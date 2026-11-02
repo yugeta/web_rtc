@@ -21,6 +21,7 @@
 |---|---|
 | [VPSデプロイ手順](./deployment.md) | Ubuntu VPS への初回セットアップ全手順（Node.js, PM2/systemd, Nginx, SSL, ファイアウォール） |
 | [本番環境デプロイ](./production-deployment.md) | 現在の本番構成サマリーと日常の更新手順 |
+| [Docker 構成パターン比較](./docker-architecture-patterns.md) | NPM を使う構成と専用 nginx を含む構成の比較、推奨構成の整理 |
 
 ### 運用
 
