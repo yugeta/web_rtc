@@ -21,28 +21,28 @@ const failureGuidance = [
 
 const sectionDefinitions = [
   {
-    key: 'initial',
-    title: '初期設定',
-    items: ['GOOGLE_CLIENT_ID', 'JWT_SECRET', 'ADMIN_USER_IDS'],
-    description: 'ログインと管理画面の基盤です。',
+    key: 'env',
+    title: '.env / サーバー設定',
+    items: ['GOOGLE_CLIENT_ID', 'JWT_SECRET', 'ADMIN_USER_IDS', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'],
+    description: 'サーバー起動と認証に必要な設定です。',
   },
   {
-    key: 'notification',
-    title: '通知設定',
-    items: ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'],
-    description: 'Push 通知の送信に必要です。',
+    key: 'stun',
+    title: 'STUN / TURN',
+    items: ['EXTERNAL_IP', 'TURN_REALM', 'TURN_USERNAME', 'TURN_PASSWORD', 'stun.mynt.work', '3478 / 5349'],
+    description: 'WebRTC の接続と NAT 越えの確認項目です。',
   },
   {
-    key: 'webrtc',
-    title: 'WebRTC / TURN',
-    items: ['EXTERNAL_IP', 'TURN_REALM', 'TURN_USERNAME', 'TURN_PASSWORD'],
-    description: '通話接続と NAT 越えに必要です。',
+    key: 'sock',
+    title: 'SOCK / API',
+    items: ['sock.mynt.work', '443 / 80', 'Google Login', 'JWT 認証', 'Room 作成'],
+    description: 'Socket.IO と API の正常動作確認です。',
   },
   {
-    key: 'network',
-    title: '外部疎通',
-    items: ['stun.mynt.work', 'sock.mynt.work', '3478 / 5349', '443 / 80'],
-    description: 'サブドメインとポートの疎通確認を行います。',
+    key: 'feature',
+    title: '機能確認',
+    items: ['通話接続', '画面共有', 'チャット送信', '通知送信'],
+    description: '最後に実際の利用機能が動くか確認します。',
   },
 ] as const;
 
