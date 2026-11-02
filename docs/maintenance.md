@@ -1,5 +1,101 @@
 # 定期メンテナンス
 
+## Docker / Container Station の異常確認
+
+### 1. コンテナの稼働状態を確認する
+
+Container Station の一覧画面で、以下を確認します。
+
+- `webrtc-sock` が `Up` になっているか
+- `webrtc-coturn` が `Up` になっているか
+- `Restarting (...)` と表示されていないか
+- ポートが正しくマッピングされているか
+
+ターミナルでの確認例:
+
+```bash
+docker ps -a
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+特に `webrtc-sock` が `Restarting (1)` になっている場合は、起動失敗が発生している可能性が高いです。
+
+### 2. ログを確認する
+
+```bash
+docker logs --tail 200 webrtc-sock
+docker logs --tail 200 webrtc-coturn
+```
+
+重要な観点:
+
+- `Missing required env`
+- `JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `ADMIN_USER_IDS`
+- `permission denied`
+- `address already in use`
+- `Error:`
+
+上記のメッセージが出ている場合は、コンテナ起動時の失敗が発生している可能性があります。
+
+### 3. 環境変数を確認する
+
+```bash
+docker exec -it webrtc-sock env | sort
+```
+
+確認したい項目:
+
+- `GOOGLE_CLIENT_ID`
+- `JWT_SECRET`
+- `ADMIN_USER_IDS`
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+
+`webrtc-coturn` 側でも必要に応じて確認します。
+
+```bash
+docker exec -it webrtc-coturn env | sort
+```
+
+### 4. サブドメインとポートの疎通を確認する
+
+```bash
+curl -I https://sock.mynt.work
+curl -I https://sock.mynt.work/api/admin/health
+curl -vk https://sock.mynt.work
+
+nc -vz stun.mynt.work 3478
+nc -vz stun.mynt.work 5349
+```
+
+期待する状態:
+
+- `sock.mynt.work` が応答する
+- `/api/admin/health` が 200 を返す
+- `stun.mynt.work:3478` が開いている
+- `stun.mynt.work:5349` が開いている
+
+### 5. 判断基準
+
+- `webrtc-coturn` が `Up` で `webrtc-sock` が `Restarting` している
+  - → `sock` 側の起動失敗を疑う
+- `sock` は応答しているが `/api/rooms` や `/api/admin` が 401/403 を返す
+  - → 認証や `ADMIN_USER_IDS` の不備を疑う
+- `sock` が応答しない、またはコンテナが落ちる
+  - → `.env`、起動時エラー、権限不足、ポート競合を疑う
+
+### 6. 典型的な原因候補
+
+- `.env` が設定されていない
+- `GOOGLE_CLIENT_ID` / `JWT_SECRET` が未設定
+- `ADMIN_USER_IDS` が空または不正
+- Docker の権限不足でディレクトリ作成が失敗している
+- `stun` / `turn` とのポート競合が発生している
+- Node.js の起動時エラーが発生している
+
 ## 日次（確認推奨）
 
 | 項目 | コマンド / 手順 |

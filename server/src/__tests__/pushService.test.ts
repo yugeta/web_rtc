@@ -5,6 +5,19 @@ import {
   buildJoinPayload,
 } from '../pushService';
 
+async function loadPushServiceWithEnv(env: Record<string, string | undefined>) {
+  vi.resetModules();
+  for (const key of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT']) {
+    if (env[key] === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = env[key]!;
+    }
+  }
+
+  return import('../pushService');
+}
+
 describe('buildInvitePayload', () => {
   it('returns correct payload with room name and inviter name', () => {
     const payload = buildInvitePayload('room-1', 'テストルーム', '田中');
@@ -56,5 +69,23 @@ describe('buildJoinPayload', () => {
     expect(payload.body).toContain('テストルーム');
     expect(payload.roomId).toBe('room-1');
     expect(payload.tag).toBe('join-room-1');
+  });
+});
+
+describe('pushService initialization', () => {
+  it('does not throw and disables push notifications when VAPID keys are invalid', async () => {
+    await expect(loadPushServiceWithEnv({
+      VAPID_PUBLIC_KEY: '/share/Web/container_station/letsencrypt/live/fullchain.pem',
+      VAPID_PRIVATE_KEY: '/share/Web/container_station/letsencrypt/live/privkey.pem',
+      VAPID_SUBJECT: 'mailto:test@example.com',
+    })).resolves.toBeDefined();
+
+    const module = await loadPushServiceWithEnv({
+      VAPID_PUBLIC_KEY: '/share/Web/container_station/letsencrypt/live/fullchain.pem',
+      VAPID_PRIVATE_KEY: '/share/Web/container_station/letsencrypt/live/privkey.pem',
+      VAPID_SUBJECT: 'mailto:test@example.com',
+    });
+
+    expect(module.pushEnabled).toBe(false);
   });
 });
