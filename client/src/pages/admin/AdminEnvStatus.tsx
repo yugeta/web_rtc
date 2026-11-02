@@ -84,8 +84,8 @@ export default function AdminEnvStatus() {
       setReport(data);
       setUpdatedAt(new Date().toLocaleString('ja-JP'));
     } catch (err) {
-      const message = err instanceof Error && err.name === 'AbortError'
-        ? '環境設定の取得がタイムアウトしました。サーバーまたは認証状態を確認してください。'
+          const message = err instanceof Error && err.name === 'AbortError'
+        ? '環境設定の取得がタイムアウトしました。サーバーが応答していない可能性があります。'
         : '環境設定の取得に失敗しました';
 
       setReport(null);
@@ -154,7 +154,7 @@ export default function AdminEnvStatus() {
         <p style={{ color: 'var(--text-muted)' }}>環境設定を確認しています...</p>
       ) : !report ? (
         <div style={{ color: 'var(--text-muted)', padding: '12px 0' }}>
-          環境設定を取得できませんでした。再取得を押して状態を確認してください。
+          環境設定の取得に失敗しました。サーバーが応答していないか、認証状態が正しくありません。
         </div>
       ) : (
         <>
