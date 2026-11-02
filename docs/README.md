@@ -28,6 +28,7 @@
 |---|---|
 | [定期メンテナンス](./maintenance.md) | 日次・週次・月次・四半期のメンテナンス項目、バックアップ対象 |
 | [トラブルシューティング](./troubleshooting.md) | クライアント/サーバー/接続/パフォーマンスの問題と解決方法 |
+| [Container Station 設定・再起動確認メモ](./troubleshooting.md#2026-11-02-container-station-設定と-docker-再起動ループの調査メモ) | ホスト側 .env、docker 起動、VAPID 設定、node_modules の扱いをまとめた運用メモ |
 | [コーディングルール](./coding-rules/) | CSS、React、全般のコーディング規約（他プロジェクトでも流用可） |
 
 ## 本番環境の構成

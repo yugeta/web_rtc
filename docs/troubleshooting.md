@@ -2,6 +2,157 @@
 
 よくある問題と解決方法をまとめています。
 
+## 2026-11-02: Container Station 設定と Docker 再起動ループの調査メモ
+
+### 1. 基本方針
+
+- docker-compose.yml にはシークレットそのものを直接書かず、ホスト側の `.env` を使って変数を注入する。
+- `.env` は Git で管理しない（`.gitignore` に含める）。
+- Container Station の場合、コンテナの起動設定と `.env` の置き場所はホスト側のアプリ配下または compose ファイルと同じディレクトリに置く運用が基本。
+- `docker compose up` やコンテナ起動の問題は、コードだけではなく実際のホスト環境・コンテナ環境・環境変数の確認が必要。
+
+### 2. 重要な意思決定
+
+- Secret のような `GOOGLE_CLIENT_ID` / `JWT_SECRET` は、YAML に直接ベタ書きしない。
+- `.env` から値を読み込む設定にして、ホスト側で管理する。
+- `docker/.env` の値は実行環境側で保管し、リポジトリには含めない。
+
+### 3. 本件で発見した再起動原因
+
+実際のログでは、`webrtc-sock` が以下のエラーで再起動していた。
+
+```text
+Error: Vapid public key must be a URL safe Base 64 (without "=")
+```
+
+調査の結果、`docker/.env` の `VAPID_PUBLIC_KEY` と `VAPID_PRIVATE_KEY` に、証明書ファイルのパス（例: `/share/Web/container_station/.../fullchain.pem`）が入っていたことが原因だった。
+
+`web-push` は VAPID 公開鍵・秘密鍵を URL-safe Base64 形式で要求するため、証明書パスやファイル名は不正な値として扱われ、起動時に落ちていた。
+
+### 4. 修正方針
+
+- VAPID キーは `npx web-push generate-vapid-keys` で生成した正しい値を使う。
+- 証明書ファイルパスを VAPID キーにしない。
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` が不正でも、アプリが落ちないように `pushService.ts` 側で防御を追加した。
+- ただし、本番環境では実際の値を適切なキーに置き換えて再起動する必要がある。
+
+### 5. node_modules の扱い
+
+- `node_modules` は「起動時」に自動生成されるものではない。
+- 通常は `npm install` / `npm ci` で一度生成される。
+- Docker イメージのビルド時やコンテナ内で依存関係をインストールしない場合、`node_modules` がない状態で起動し、`Cannot find module` などで落ちる。
+- そのため、実サーバー側では依存関係のインストール状態を確認する必要がある。
+
+### 6. 実運用者側で確認するべきこと
+
+本番サーバー側で確認するコマンド例:
+
+```bash
+docker ps -adocker logs --tail 200 webrtc-sock
+docker logs --tail 200 webrtc-coturn
+docker exec -it webrtc-sock env | sort
+curl -I https://sock.mynt.work/api/admin/health
+```
+
+確認ポイント:
+
+- `webrtc-sock` が `Restarting` していないか
+- `VAPID_PUBLIC_KEY` と `VAPID_PRIVATE_KEY` が Base64 形式か
+- `.env` の値が実際に設定されているか
+- `sock.mynt.work` が `200` などの正常応答を返しているか
+- スタックのどこが落ちているか（sock / stun / API / auth）
+
+### 7. AI と本番環境の責務の分離
+
+- このワークスペースでは、ソースコード・構成・起動設計の確認までが可能。
+- ただし、別ホストの実サーバーやコンテナの中身、ログ、環境変数、ファイルシステムは AI では直接確認できない。
+- 実際の本番サーバーでの `docker logs` / `docker exec` / `env` 確認は、運用者側で実施する前提。
+
+### 8. 結論
+
+今回の事象は「Frontend のバグ」ではなく、実際の Docker 上で起きている `webrtc-sock` の起動失敗である。直接の主因は VAPID キーの不正値設定だった。
+
+そのため、修正対象は以下の順序で進める。
+
+1. 実サーバー側の `.env` を正しい VAPID キーに修正
+2. コンテナを再起動
+3. `docker logs --tail 200 webrtc-sock` で再度確認
+4. `sock.mynt.work/api/admin/health` で正常応答を確認
+5. 必要に応じて `coturn` / `stun` / API の疎通も確認
+
+### 9. 本番サーバーでの最短確認手順
+
+最初に実施するコマンドは次の3つです。
+
+```bash
+docker ps -a
+docker logs --tail 200 webrtc-sock
+docker exec -it webrtc-sock env | sort | grep -E 'VAPID|GOOGLE|JWT|ADMIN'
+```
+
+以下も追加で確認します。
+
+```bash
+docker exec -it webrtc-sock ls -la /app
+
+docker exec -it webrtc-sock ls -la /app/node_modules | head
+
+curl -I https://sock.mynt.work/api/admin/health
+curl -I https://sock.mynt.work/api/rooms
+```
+
+判断基準:
+
+- `webrtc-sock` が `Restarting` している → 起動失敗
+- `VAPID_PUBLIC_KEY` が `=` を含む・証明書パス形式のような値 → 不正
+- `/app/node_modules` が存在しない → 依存関係未インストール
+- `/api/admin/health` が返らない → API 側の起動失敗または認証の問題
+
+### 10. VAPID 鍵の生成と設定手順
+
+本番サーバー側で実施する。
+
+```bash
+cd /path/to/project/server
+npm install
+npx web-push generate-vapid-keys
+```
+
+出力例:
+
+```text
+Public Key: BLA...  
+Private Key: 5e8... 
+```
+
+これを `.env` に設定する:
+
+```env
+VAPID_PUBLIC_KEY=YOUR_PUBLIC_KEY
+VAPID_PRIVATE_KEY=YOUR_PRIVATE_KEY
+VAPID_SUBJECT=mailto:your-email@example.com
+```
+
+注意:
+
+- `VAPID_PUBLIC_KEY` と `VAPID_PRIVATE_KEY` は、証明書ファイルパスではなく、`web-push generate-vapid-keys` の出力値を使う。
+- 値に `=` が含まれる場合でも不正なことがあるので、生成結果をそのまま使う。
+- `VAPID_PUBLIC_KEY` はクライアント側の `VITE_VAPID_PUBLIC_KEY` と同じ値を使う。
+
+### 11. 修正後の再起動確認
+
+```bash
+docker compose up -d --force-recreate webrtc-sock
+
+docker logs --tail 200 webrtc-sock
+```
+
+期待する状態:
+
+- `Error: Vapid public key ...` が出ない
+- `app@1.0.0 start` から Node.js が起動する
+- `webrtc-sock` が `Up` で継続稼働する
+
 ## クライアント側の問題
 
 ### カメラ/マイクが動作しない
